@@ -1,8 +1,32 @@
 import 'dotenv/config'
 import { config } from './config.js'
 import { apiGet } from './api.js'
+import { getOrderBook, getTrades } from './api.js'
 
 async function main(): Promise<void> {
+  console.log('Fetching market data...\n')
+
+  const orderbook = await getOrderBook()
+  const trades = await getTrades()
+
+  const bestBid = orderbook.bids[0]
+  const bestAsk = orderbook.asks[0]
+
+  const lastTrade = trades[0]
+
+  console.log('--- Market Snapshot ---')
+  console.log(`Best Bid: ${bestBid.price} (${bestBid.amount})`)
+  console.log(`Best Ask: ${bestAsk.price} (${bestAsk.amount})`)
+
+  console.log(`Spread: ${(bestAsk.price - bestBid.price).toFixed(8)}`)
+
+  console.log('\n--- Last Trade ---')
+  console.log(`Price: ${lastTrade.price}`)
+  console.log(`Amount: ${lastTrade.amount}`)
+  console.log(`Time: ${lastTrade.created_at}`)
+}
+
+/* async function main(): Promise<void> {
   console.log('Env loaded successfully')
 
   const paths = [
@@ -24,7 +48,7 @@ async function main(): Promise<void> {
       console.error(err instanceof Error ? err.message : err)
     }
   }
-}
+} */
 
 main().catch((error) => {
   console.error('Startup failed:')
