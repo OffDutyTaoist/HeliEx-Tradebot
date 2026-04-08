@@ -14,3 +14,16 @@ export type Trade = {
   amount: string
   created_at: string
 }
+
+export type WalletAssetStatus = {
+  online: boolean
+  error: string
+}
+
+export type WalletStatus = {
+  online: boolean
+  assets: {
+    GRC?: WalletAssetStatus
+    CURE?: WalletAssetStatus
+  }
+}

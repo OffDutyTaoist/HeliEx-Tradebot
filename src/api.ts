@@ -1,13 +1,5 @@
 import { config } from './config.js'
-import type { OrderBook, Trade } from './types.js'
-
-export async function getOrderBook(): Promise<OrderBook> {
-  return apiGet('/api/orderbook') as Promise<OrderBook>
-}
-
-export async function getTrades(): Promise<Trade[]> {
-  return apiGet('/api/trades') as Promise<Trade[]>
-}
+import type { OrderBook, Trade, WalletStatus } from './types.js'
 
 export async function apiGet(path: string): Promise<unknown> {
   const url = new URL(path, config.heliExBaseUrl)
@@ -28,4 +20,16 @@ export async function apiGet(path: string): Promise<unknown> {
   }
 
   return response.text()
+}
+
+export async function getOrderBook(): Promise<OrderBook> {
+  return apiGet('/api/orderbook') as Promise<OrderBook>
+}
+
+export async function getTrades(): Promise<Trade[]> {
+  return apiGet('/api/trades') as Promise<Trade[]>
+}
+
+export async function getWalletStatus(): Promise<WalletStatus> {
+  return apiGet('/api/wallet_status') as Promise<WalletStatus>
 }

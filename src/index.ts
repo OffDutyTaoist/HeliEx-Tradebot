@@ -1,57 +1,125 @@
 import 'dotenv/config'
-import { config } from './config.js'
-import { apiGet } from './api.js'
-import { getOrderBook, getTrades } from './api.js'
+import { getOrderBook, getTrades, getWalletStatus } from './api.js'
+import { buildMarketSnapshot, type MarketSnapshot } from './market.js'
+import type { WalletStatus } from './types.js'
 
-async function main(): Promise<void> {
-  console.log('Fetching market data...\n')
-
-  const orderbook = await getOrderBook()
-  const trades = await getTrades()
-
-  const bestBid = orderbook.bids[0]
-  const bestAsk = orderbook.asks[0]
-
-  const lastTrade = trades[0]
-
-  console.log('--- Market Snapshot ---')
-  console.log(`Best Bid: ${bestBid.price} (${bestBid.amount})`)
-  console.log(`Best Ask: ${bestAsk.price} (${bestAsk.amount})`)
-
-  console.log(`Spread: ${(bestAsk.price - bestBid.price).toFixed(8)}`)
-
-  console.log('\n--- Last Trade ---')
-  console.log(`Price: ${lastTrade.price}`)
-  console.log(`Amount: ${lastTrade.amount}`)
-  console.log(`Time: ${lastTrade.created_at}`)
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-/* async function main(): Promise<void> {
-  console.log('Env loaded successfully')
+function logSnapshot(snapshot: MarketSnapshot) {
+  console.log('\n--- Market Snapshot ---')
+  console.log(`Bid: ${snapshot.bestBid} (${snapshot.bestBidAmount})`)
+  console.log(`Ask: ${snapshot.bestAsk} (${snapshot.bestAskAmount})`)
+  console.log(`Spread: ${snapshot.spread.toFixed(8)}`)
+  console.log(`Last: ${snapshot.lastTradePrice ?? 'N/A'}`)
+}
 
-  const paths = [
-    '/api',
-    '/api/trades',
-    '/api/orderbook',
-    '/api/markets',
-    '/api/ticker',
-    '/api/wallet_status'
-  ]
+function logDiff(prev: MarketSnapshot, next: MarketSnapshot) {
+  const changes: string[] = []
 
-  for (const path of paths) {
+  if (prev.bestBid !== next.bestBid) {
+    changes.push(`Bid changed: ${prev.bestBid} → ${next.bestBid}`)
+  }
+
+  if (prev.bestAsk !== next.bestAsk) {
+    changes.push(`Ask changed: ${prev.bestAsk} → ${next.bestAsk}`)
+  }
+
+  if (prev.lastTradePrice !== next.lastTradePrice) {
+    changes.push(`Last trade: ${prev.lastTradePrice} → ${next.lastTradePrice}`)
+  }
+
+  if (prev.spread !== next.spread) {
+    changes.push(
+      `Spread: ${prev.spread.toFixed(8)} → ${next.spread.toFixed(8)}`
+    )
+  }
+
+  if (changes.length === 0) {
+    return
+  }
+
+  console.log('\n--- Changes ---')
+  for (const change of changes) {
+    console.log(change)
+  }
+}
+
+function logWalletStatus(walletStatus: WalletStatus) {
+  const grc = walletStatus.assets.GRC
+  const cure = walletStatus.assets.CURE
+
+  console.log('\n--- Wallet Status ---')
+  console.log(`Exchange online: ${walletStatus.online ? 'yes' : 'no'}`)
+  console.log(`GRC wallet: ${grc?.online ? 'online' : 'offline'}`)
+  console.log(`CURE wallet: ${cure?.online ? 'online' : 'offline'}`)
+
+  if (grc?.error) {
+    console.log(`GRC error: ${grc.error}`)
+  }
+
+  if (cure?.error) {
+    console.log(`CURE error: ${cure.error}`)
+  }
+}
+
+function getWalletWarnings(walletStatus: WalletStatus): string[] {
+  const warnings: string[] = []
+
+  if (!walletStatus.online) {
+    warnings.push('Exchange reports wallets offline')
+  }
+
+  if (walletStatus.assets.GRC && !walletStatus.assets.GRC.online) {
+    warnings.push('GRC wallet offline')
+  }
+
+  if (walletStatus.assets.CURE && !walletStatus.assets.CURE.online) {
+    warnings.push('CURE wallet offline')
+  }
+
+  return warnings
+}
+
+async function main(): Promise<void> {
+  console.log('Starting market watcher...\n')
+
+  let previous: MarketSnapshot | null = null
+
+  while (true) {
     try {
-      console.log(`\n--- Testing ${path} ---`)
-      const result = await apiGet(path)
-      console.log(result)
+      const orderBook = await getOrderBook()
+      const trades = await getTrades()
+      const walletStatus = await getWalletStatus()
+
+      const warnings = getWalletWarnings(walletStatus)
+      for (const warning of warnings) {
+        console.log(`\nWARNING: ${warning}`)
+      }
+
+      const snapshot = buildMarketSnapshot(orderBook, trades)
+
+      if (!previous) {
+        logSnapshot(snapshot)
+        logWalletStatus(walletStatus)
+      } else {
+        logDiff(previous, snapshot)
+      }
+
+      previous = snapshot
     } catch (err) {
-      console.error(`Failed: ${path}`)
+      console.error('\n--- ERROR ---')
       console.error(err instanceof Error ? err.message : err)
     }
-  }
-} */
 
-main().catch((error) => {
-  console.error('Startup failed:')
-  console.error(error instanceof Error ? error.message : error)
+    console.log(`Checked at ${new Date().toISOString()}`)
+    await sleep(15000)
+  }
+}
+
+main().catch((err) => {
+  console.error('Fatal startup error:')
+  console.error(err instanceof Error ? err.message : err)
   process.exit(1)
 })
