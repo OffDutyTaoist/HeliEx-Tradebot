@@ -1,0 +1,13 @@
+# Secrets
+keys.env
+.env
+
+# Node stuff (future-proofing)
+node_modules/
+dist/
+
+# Logs
+*.log
+
+# OS junk
+.DS_Store
