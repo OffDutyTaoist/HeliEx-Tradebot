@@ -11,3 +11,10 @@ dist/
 
 # OS junk
 .DS_Store
+
+# Build output
+dist/
+*.js.map
+
+# Accidental root JS files
+/types.js
