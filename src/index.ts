@@ -2,6 +2,7 @@ import 'dotenv/config'
 import { getOrderBook, getTrades, getWalletStatus } from './api.js'
 import { buildMarketSnapshot, type MarketSnapshot } from './market.js'
 import type { WalletStatus } from './types.js'
+import { evaluateSignal } from './signals.js'
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -82,10 +83,44 @@ function getWalletWarnings(walletStatus: WalletStatus): string[] {
   return warnings
 }
 
+function logSignal(signal: { shouldTrade: boolean; reasons: string[] }) {
+  console.log('\n--- Signal ---')
+
+  if (signal.shouldTrade) {
+    console.log('WOULD TRADE')
+    return
+  }
+
+  console.log('NO TRADE')
+  for (const reason of signal.reasons) {
+    console.log(`- ${reason}`)
+  }
+}
+
+type LoggedSignal = {
+  shouldTrade: boolean
+  reasons: string[]
+}
+
+function signalsEqual(a: LoggedSignal | null, b: LoggedSignal): boolean {
+  if (!a) return false
+  if (a.shouldTrade !== b.shouldTrade) return false
+  if (a.reasons.length !== b.reasons.length) return false
+
+  for (let i = 0; i < a.reasons.length; i++) {
+    if (a.reasons[i] !== b.reasons[i]) {
+      return false
+    }
+  }
+
+  return true
+}
+
 async function main(): Promise<void> {
   console.log('Starting market watcher...\n')
 
   let previous: MarketSnapshot | null = null
+  let previousSignal: LoggedSignal | null = null
 
   while (true) {
     try {
@@ -99,12 +134,21 @@ async function main(): Promise<void> {
       }
 
       const snapshot = buildMarketSnapshot(orderBook, trades)
+      const signal = evaluateSignal(snapshot, walletStatus)
 
       if (!previous) {
         logSnapshot(snapshot)
         logWalletStatus(walletStatus)
       } else {
         logDiff(previous, snapshot)
+      }
+
+      if (!signalsEqual(previousSignal, signal)) {
+        logSignal(signal)
+        previousSignal = {
+          shouldTrade: signal.shouldTrade,
+          reasons: [...signal.reasons],
+        }
       }
 
       previous = snapshot
