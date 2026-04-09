@@ -56,6 +56,10 @@ function pricesRoughlyEqual(a: number, b: number): boolean {
   return Math.abs(a - b) <= PRICE_MATCH_TOLERANCE
 }
 
+export function calculateOrderCost(price: string, amount: string): number {
+  return Number(price) * Number(amount)
+}
+
 export function buildExecutionPlan(
   snapshot: MarketSnapshot,
   signal: TradeSignal,

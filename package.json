@@ -11,7 +11,8 @@
     "analyze": "tsx src/analyze-log.ts",
     "test:private": "tsx src/test-private.ts",
     "test:trade": "tsx src/test-trade.ts",
-    "test:execution": "tsx src/test-execution.ts"
+    "test:execution": "tsx src/test-execution.ts",
+    "run:execution": "tsx src/execute-cycle.ts"
   },
   "keywords": [],
   "author": "",

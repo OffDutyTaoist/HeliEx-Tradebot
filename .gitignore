@@ -26,3 +26,5 @@ dist/
 # accidental generated files
 /types.js
 
+# Security 
+src/strategy/private-strategy.ts
