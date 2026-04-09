@@ -24,7 +24,7 @@ export function buildMarketSnapshot(
     bestBidAmount: bestBid?.amount ?? 0,
     bestAsk: bestAsk?.price ?? 0,
     bestAskAmount: bestAsk?.amount ?? 0,
-    spread: bestBid && bestAsk ? bestAsk.price - bestBid.price : 0,
+    spread: bestBid && bestAsk ? Number((bestAsk.price - bestBid.price).toFixed(8)) : 0,
     lastTradePrice: lastTrade ? Number(lastTrade.price) : null,
     lastTradeAmount: lastTrade ? Number(lastTrade.amount) : null,
     lastTradeTime: lastTrade?.created_at ?? null,

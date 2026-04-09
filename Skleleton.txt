@@ -1,0 +1,22 @@
+﻿Phase 1: private read access
+Before the bot can trade, it should prove it can:
+    • read balances 
+    • read your open orders 
+    • read your own trade history 
+If those work, auth/signing model is real.
+Phase 2: smallest possible write action
+Then do a proof-of-concept live action:
+    • place one tiny limit order far from market so it does not instantly fill 
+    • confirm it appears in open orders 
+    • cancel it 
+    • confirm it disappears 
+That is the cleanest “hands work” proof.
+Phase 3: trade-state reconciliation
+After that, build logic for:
+    • placed order ID 
+    • order status polling 
+    • cancel success 
+    • partial fill detection 
+    • local state vs exchange state mismatch handling 
+Phase 4: Profit???
+

@@ -7,7 +7,11 @@
   "scripts": {
     "dev": "tsx src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "analyze": "tsx src/analyze-log.ts",
+    "test:private": "tsx src/test-private.ts",
+    "test:trade": "tsx src/test-trade.ts",
+    "test:execution": "tsx src/test-execution.ts"
   },
   "keywords": [],
   "author": "",

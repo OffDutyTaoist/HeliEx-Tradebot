@@ -8,6 +8,7 @@ dist/
 
 # Logs
 *.log
+logs/
 
 # OS junk
 .DS_Store
@@ -24,3 +25,4 @@ dist/
 
 # accidental generated files
 /types.js
+

@@ -3,6 +3,7 @@ import { getOrderBook, getTrades, getWalletStatus } from './api.js'
 import { buildMarketSnapshot, type MarketSnapshot } from './market.js'
 import type { WalletStatus } from './types.js'
 import { evaluateSignal } from './signals.js'
+import { appendJsonLine } from './logger.js'
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -83,15 +84,32 @@ function getWalletWarnings(walletStatus: WalletStatus): string[] {
   return warnings
 }
 
-function logSignal(signal: { shouldTrade: boolean; reasons: string[] }) {
-  console.log('\n--- Signal ---')
+function getWatchlistLabel(score: number): string | null {
+  if (score >= 85) return 'HIGH CONVICTION'
+  if (score >= 70) return 'WATCHLIST'
+  return null
+}
 
-  if (signal.shouldTrade) {
-    console.log('WOULD TRADE')
+function logSignal(signal: {
+  shouldTrade: boolean
+  state: string
+  reasons: string[]
+  score: number
+}) {
+  console.log('\n--- Signal ---')
+  console.log(
+    `${signal.shouldTrade ? 'WOULD TRADE' : 'NO TRADE'} | state=${signal.state} | score=${signal.score}/100`
+  )
+
+  const label = getWatchlistLabel(signal.score)
+  if (label) {
+    console.log(`Label: ${label}`)
+  }
+
+  if (signal.reasons.length === 0) {
     return
   }
 
-  console.log('NO TRADE')
   for (const reason of signal.reasons) {
     console.log(`- ${reason}`)
   }
@@ -99,12 +117,67 @@ function logSignal(signal: { shouldTrade: boolean; reasons: string[] }) {
 
 type LoggedSignal = {
   shouldTrade: boolean
+  state: string
   reasons: string[]
+  score: number
+}
+
+function logSignalTransition(
+  previous: LoggedSignal | null,
+  next: LoggedSignal
+) {
+  if (!previous) {
+    return
+  }
+
+  const changes: string[] = []
+
+  if (previous.state !== next.state) {
+    changes.push(`State changed: ${previous.state} -> ${next.state}`)
+  }
+
+  if (previous.shouldTrade !== next.shouldTrade) {
+    changes.push(
+      `Decision changed: ${previous.shouldTrade ? 'WOULD TRADE' : 'NO TRADE'} -> ${next.shouldTrade ? 'WOULD TRADE' : 'NO TRADE'}`
+    )
+  }
+
+  if (previous.score !== next.score) {
+    changes.push(`Score changed: ${previous.score} -> ${next.score}`)
+  }
+
+  if (changes.length === 0) {
+    return
+  }
+
+  console.log('\n--- Signal Transition ---')
+  for (const change of changes) {
+    console.log(change)
+  }
+}
+
+function logAlerts(previous: LoggedSignal | null, next: LoggedSignal) {
+  const prevLabel = previous ? getWatchlistLabel(previous.score) : null
+  const nextLabel = getWatchlistLabel(next.score)
+
+  if (previous && previous.state !== 'candidate' && next.state === 'candidate') {
+    console.log('\n=== ALERT: MARKET ENTERED CANDIDATE STATE ===')
+  }
+
+  if (previous && !previous.shouldTrade && next.shouldTrade) {
+    console.log('\n=== ALERT: WOULD TRADE TURNED TRUE ===')
+  }
+
+  if (prevLabel !== nextLabel && nextLabel) {
+    console.log(`\n=== ALERT: ${nextLabel} ===`)
+  }
 }
 
 function signalsEqual(a: LoggedSignal | null, b: LoggedSignal): boolean {
   if (!a) return false
   if (a.shouldTrade !== b.shouldTrade) return false
+  if (a.state !== b.state) return false
+  if (a.score !== b.score) return false
   if (a.reasons.length !== b.reasons.length) return false
 
   for (let i = 0; i < a.reasons.length; i++) {
@@ -114,6 +187,11 @@ function signalsEqual(a: LoggedSignal | null, b: LoggedSignal): boolean {
   }
 
   return true
+}
+
+function getLogFilePath(date = new Date()): string {
+  const day = date.toISOString().slice(0, 10)
+  return `logs/market-${day}.jsonl`
 }
 
 async function main(): Promise<void> {
@@ -135,6 +213,7 @@ async function main(): Promise<void> {
 
       const snapshot = buildMarketSnapshot(orderBook, trades)
       const signal = evaluateSignal(snapshot, walletStatus)
+      const now = new Date()
 
       if (!previous) {
         logSnapshot(snapshot)
@@ -144,12 +223,35 @@ async function main(): Promise<void> {
       }
 
       if (!signalsEqual(previousSignal, signal)) {
+        logSignalTransition(previousSignal, signal)
+        logAlerts(previousSignal, signal) 
         logSignal(signal)
+
         previousSignal = {
           shouldTrade: signal.shouldTrade,
+          state: signal.state,
           reasons: [...signal.reasons],
+          score: signal.score,
         }
       }
+
+      await appendJsonLine(getLogFilePath(now), {
+        ts: now.toISOString(),
+        bid: snapshot.bestBid,
+        bidAmount: snapshot.bestBidAmount,
+        ask: snapshot.bestAsk,
+        askAmount: snapshot.bestAskAmount,
+        spread: snapshot.spread,
+        lastTradeTime:snapshot.lastTradeTime,
+        last: snapshot.lastTradePrice,
+        state: signal.state,
+        score: signal.score,
+        label: getWatchlistLabel(signal.score),
+        shouldTrade: signal.shouldTrade,
+        walletsOnline: walletStatus.online,
+        grcOnline: walletStatus.assets.GRC?.online ?? false,
+        cureOnline: walletStatus.assets.CURE?.online ?? false,
+      })
 
       previous = snapshot
     } catch (err) {
