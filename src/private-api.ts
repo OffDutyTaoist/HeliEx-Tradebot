@@ -1,3 +1,4 @@
+import { ExchangeUnavailableError, isCloudflareTunnelError } from './errors.js'
 import crypto from 'node:crypto'
 import { config } from './config.js'
 
@@ -67,6 +68,13 @@ async function privateRequest<T>(
 
   if (!response.ok) {
     const text = await response.text()
+
+    if (response.status === 530 || isCloudflareTunnelError(text)) {
+      throw new ExchangeUnavailableError(
+        'HeliEx unavailable: Cloudflare tunnel error'
+      )
+    }
+
     throw new Error(
       `${method} ${path} failed: ${response.status} ${response.statusText}\n${text}`
     )

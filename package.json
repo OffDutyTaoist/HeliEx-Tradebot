@@ -14,7 +14,8 @@
     "test:execution": "tsx src/test-execution.ts",
     "run:execution": "tsx src/execute-cycle.ts",
     "test:reconciliation": "tsx src/test-reconciliation.ts",
-    "test:strategy": "tsx src/test-strategy.ts"
+    "test:strategy": "tsx src/test-strategy.ts",
+    "live:readiness": "tsx src/live-readiness.ts"
   },
   "keywords": [],
   "author": "",

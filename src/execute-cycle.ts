@@ -1,6 +1,6 @@
+import 'dotenv/config'
 import { getLastActionTime, setLastActionTime } from './runtime-state.js'
 import { PrivateStrategy } from './strategy/private-strategy.js'
-import 'dotenv/config'
 import { getOrderBook, getTrades, getWalletStatus } from './api.js'
 import {
   getBalances,
@@ -17,12 +17,8 @@ import {
   getOpenBuyOrders,
   getPartialBuyOrders,
 } from './reconciliation.js'
-
-
-const DRY_RUN = true
-const MAX_GRC_PER_ORDER = 1.0
-const COOLDOWN_MS = 30 * 1000
-const TRADING_ENABLED = process.env.TRADING_ENABLED === 'true'
+import { runtimeConfig } from './runtime-config.js'
+import { ExchangeUnavailableError } from './errors.js'
 
 function getAvailableGrcBalance(balances: Balance[]): number {
   const grc = balances.find((balance) => balance.asset === 'GRC')
@@ -33,20 +29,34 @@ function canActNow(): { allowed: boolean; reason?: string } {
   const lastActionTime = getLastActionTime()
   const elapsed = Date.now() - lastActionTime
 
-  if (lastActionTime > 0 && elapsed < COOLDOWN_MS) {
+  if (lastActionTime > 0 && elapsed < runtimeConfig.cooldownMs) {
     return {
       allowed: false,
-      reason: `Cooldown active (${Math.ceil((COOLDOWN_MS - elapsed) / 1000)}s remaining)`,
+      reason: `Cooldown active (${Math.ceil((runtimeConfig.cooldownMs - elapsed) / 1000)}s remaining)`,
     }
   }
 
   return { allowed: true }
 }
 
+function logPreflight(): void {
+  console.log('--- Preflight ---')
+  console.log(`Mode: ${runtimeConfig.dryRun ? 'DRY RUN' : 'LIVE'}`)
+  console.log(`Trading enabled: ${runtimeConfig.tradingEnabled ? 'yes' : 'no'}`)
+  console.log(`Live confirmation: ${runtimeConfig.liveConfirmation ? 'yes' : 'no'}`)
+  console.log(`Max GRC per order: ${runtimeConfig.maxGrcPerOrder}`)
+  console.log(`Cooldown: ${runtimeConfig.cooldownMs / 1000}s`)
+  console.log(`Strategy: ${runtimeConfig.strategyName}`)
+
+  if (!runtimeConfig.dryRun && runtimeConfig.tradingEnabled) {
+    console.log('WARNING: LIVE TRADING IS ENABLED')
+  }
+}
+
 async function main(): Promise<void> {
   console.log('Running execution cycle...\n')
-  console.log(`Mode: ${DRY_RUN ? 'DRY RUN' : 'LIVE'}`)
-  console.log(`Max GRC per order: ${MAX_GRC_PER_ORDER}\n`)
+  logPreflight()
+  console.log('')
 
   const [orderBook, trades, walletStatus, orders, balances] =
     await Promise.all([
@@ -90,22 +100,25 @@ async function main(): Promise<void> {
 
   const actionCheck = canActNow()
 
-if (
+  if (
   (plan.action === 'place_buy' || plan.action === 'replace_existing') &&
-  !actionCheck.allowed
-) {
-  console.log(`\nBlocked: ${actionCheck.reason}`)
-  return
-}
+  !runtimeConfig.dryRun &&
+  (!runtimeConfig.tradingEnabled || !runtimeConfig.liveConfirmation)
+  ) {
+    console.log(
+      '\nBlocked: live trading confirmation not satisfied (requires TRADING_ENABLED=true and LIVE_CONFIRMATION=true)'
+    )
+    return
+  }
 
-if (
-  (plan.action === 'place_buy' || plan.action === 'replace_existing') &&
-  !DRY_RUN &&
-  !TRADING_ENABLED
-) {
-  console.log('\nBlocked: live trading disabled (set TRADING_ENABLED=true to enable)')
-  return
-}
+  if (
+    (plan.action === 'place_buy' || plan.action === 'replace_existing') &&
+    !runtimeConfig.dryRun &&
+    !runtimeConfig.tradingEnabled
+  ) {
+    console.log('\nBlocked: live trading disabled (set runtimeConfig.tradingEnabled=true to enable)')
+    return
+  }
 
   switch (plan.action) {
     case 'none': {
@@ -129,9 +142,9 @@ if (
       console.log(`Cost: ${cost.toFixed(8)} GRC`)
       console.log(`Available GRC: ${availableGrc.toFixed(8)}`)
 
-      if (cost > MAX_GRC_PER_ORDER) {
+      if (cost > runtimeConfig.maxGrcPerOrder) {
         console.log(
-          `Blocked: order cost ${cost.toFixed(8)} exceeds cap of ${MAX_GRC_PER_ORDER.toFixed(8)} GRC`
+          `Blocked: order cost ${cost.toFixed(8)} exceeds cap of ${runtimeConfig.maxGrcPerOrder.toFixed(8)} GRC`
         )
         return
       }
@@ -143,7 +156,7 @@ if (
         return
       }
 
-      if (DRY_RUN) {
+      if (runtimeConfig.dryRun) {
         console.log('\nDRY RUN: would place buy order now.')
         return
       }
@@ -171,9 +184,9 @@ if (
       console.log(`New cost: ${cost.toFixed(8)} GRC`)
       console.log(`Available GRC: ${availableGrc.toFixed(8)}`)
 
-      if (cost > MAX_GRC_PER_ORDER) {
+      if (cost > runtimeConfig.maxGrcPerOrder) {
         console.log(
-          `Blocked: replacement cost ${cost.toFixed(8)} exceeds cap of ${MAX_GRC_PER_ORDER.toFixed(8)} GRC`
+          `Blocked: replacement cost ${cost.toFixed(8)} exceeds cap of ${runtimeConfig.maxGrcPerOrder.toFixed(8)} GRC`
         )
         return
       }
@@ -185,7 +198,7 @@ if (
         return
       }
 
-      if (DRY_RUN) {
+      if (runtimeConfig.dryRun) {
         console.log(
           `\nDRY RUN: would cancel order #${plan.orderId} and place replacement buy order.`
         )
@@ -217,6 +230,11 @@ if (
 }
 
 main().catch((err) => {
+  if (err instanceof ExchangeUnavailableError) {
+    console.error('Execution cycle aborted: HeliEx unavailable (Cloudflare tunnel error).')
+    process.exit(1)
+  }
+
   console.error('Execution cycle failed:')
   console.error(err instanceof Error ? err.message : err)
   process.exit(1)

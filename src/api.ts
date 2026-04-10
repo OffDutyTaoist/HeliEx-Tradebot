@@ -1,3 +1,4 @@
+import { ExchangeUnavailableError, isCloudflareTunnelError } from './errors.js'
 import { config } from './config.js'
 import type { OrderBook, Trade, WalletStatus } from './types.js'
 
@@ -8,6 +9,13 @@ export async function apiGet(path: string): Promise<unknown> {
 
   if (!response.ok) {
     const body = await response.text()
+
+    if (response.status === 530 || isCloudflareTunnelError(body)) {
+      throw new ExchangeUnavailableError(
+        'HeliEx unavailable: Cloudflare tunnel error'
+      )
+    }
+
     throw new Error(
       `GET ${url.toString()} failed: ${response.status} ${response.statusText}\n${body}`
     )
