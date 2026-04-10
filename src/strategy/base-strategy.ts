@@ -1,6 +1,7 @@
 import type { ExecutionPlan } from '../execution.js'
 import type { StrategyContext, TradingStrategy } from './base-strategy.js'
 import type { StrategyContext, TradingStrategy } from './types.js'
+import { findActiveBuyOrder } from '../reconciliation.js'
 
 const BUY_AMOUNT = 0.1
 const PRICE_TICK = 0.00000001
@@ -12,10 +13,6 @@ function format8(value: number): string {
 
 function pricesRoughlyEqual(a: number, b: number): boolean {
   return Math.abs(a - b) <= PRICE_MATCH_TOLERANCE
-}
-
-function isOpenOrder(status?: string): boolean {
-  return status === 'open' || status === 'partial'
 }
 
 export class BaseStrategy implements TradingStrategy {
@@ -45,9 +42,7 @@ export class BaseStrategy implements TradingStrategy {
       }
     }
 
-    const existing = orders.find(
-      (order) => order.side === 'buy' && isOpenOrder(order.status)
-    )
+    const existing = findActiveBuyOrder(orders)
 
     if (!existing) {
       return {

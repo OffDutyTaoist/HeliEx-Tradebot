@@ -1,3 +1,4 @@
+import { getLastActionTime, setLastActionTime } from './runtime-state.js'
 import { PrivateStrategy } from './strategy/private-strategy.js'
 import 'dotenv/config'
 import { getOrderBook, getTrades, getWalletStatus } from './api.js'
@@ -11,14 +12,35 @@ import {
 import { buildMarketSnapshot } from './market.js'
 import { evaluateSignal } from './signals.js'
 import { calculateOrderCost } from './execution.js'
+import {
+  getActiveBuyOrders,
+  getOpenBuyOrders,
+  getPartialBuyOrders,
+} from './reconciliation.js'
 
 
 const DRY_RUN = true
 const MAX_GRC_PER_ORDER = 1.0
+const COOLDOWN_MS = 30 * 1000
+const TRADING_ENABLED = process.env.TRADING_ENABLED === 'true'
 
 function getAvailableGrcBalance(balances: Balance[]): number {
   const grc = balances.find((balance) => balance.asset === 'GRC')
   return grc ? Number(grc.available) : 0
+}
+
+function canActNow(): { allowed: boolean; reason?: string } {
+  const lastActionTime = getLastActionTime()
+  const elapsed = Date.now() - lastActionTime
+
+  if (lastActionTime > 0 && elapsed < COOLDOWN_MS) {
+    return {
+      allowed: false,
+      reason: `Cooldown active (${Math.ceil((COOLDOWN_MS - elapsed) / 1000)}s remaining)`,
+    }
+  }
+
+  return { allowed: true }
 }
 
 async function main(): Promise<void> {
@@ -58,8 +80,32 @@ async function main(): Promise<void> {
   console.log('\n--- Existing Orders ---')
   console.log(orders)
 
+  console.log('\n--- Reconciliation View ---')
+  console.log('Active buy orders:', getActiveBuyOrders(orders))
+  console.log('Open buy orders:', getOpenBuyOrders(orders))
+  console.log('Partial buy orders:', getPartialBuyOrders(orders))
+
   console.log('\n--- Execution Plan ---')
   console.log(plan)
+
+  const actionCheck = canActNow()
+
+if (
+  (plan.action === 'place_buy' || plan.action === 'replace_existing') &&
+  !actionCheck.allowed
+) {
+  console.log(`\nBlocked: ${actionCheck.reason}`)
+  return
+}
+
+if (
+  (plan.action === 'place_buy' || plan.action === 'replace_existing') &&
+  !DRY_RUN &&
+  !TRADING_ENABLED
+) {
+  console.log('\nBlocked: live trading disabled (set TRADING_ENABLED=true to enable)')
+  return
+}
 
   switch (plan.action) {
     case 'none': {
@@ -108,6 +154,8 @@ async function main(): Promise<void> {
         amount: plan.amount,
       })
 
+      setLastActionTime(Date.now())
+
       console.log('\n--- Buy Order Placed ---')
       console.log(placed)
       return
@@ -153,6 +201,8 @@ async function main(): Promise<void> {
         price: plan.newPrice,
         amount: plan.newAmount,
       })
+
+      setLastActionTime(Date.now())
 
       console.log('\n--- Replacement Buy Order Placed ---')
       console.log(placed)
