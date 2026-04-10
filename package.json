@@ -12,7 +12,9 @@
     "test:private": "tsx src/test-private.ts",
     "test:trade": "tsx src/test-trade.ts",
     "test:execution": "tsx src/test-execution.ts",
-    "run:execution": "tsx src/execute-cycle.ts"
+    "run:execution": "tsx src/execute-cycle.ts",
+    "test:reconciliation": "tsx src/test-reconciliation.ts",
+    "test:strategy": "tsx src/test-strategy.ts"
   },
   "keywords": [],
   "author": "",
