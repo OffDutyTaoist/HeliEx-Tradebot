@@ -189,26 +189,32 @@ HELIX_API_SECRET=your_secret
 TRADING_ENABLED=false
 LIVE_CONFIRMATION=false
 
-Usage Philosophy
+## Usage Philosophy
 
-This bot is not designed to:
+### This bot is not designed to:
+
     • chase trades 
     • force activity 
     • maximize short-term profit 
     
-It is designed to:
+### It is designed to:
+
     • observe 
     • evaluate 
     • act only when conditions are acceptable 
 
-Future Direction
-Potential future additions:
+## Future Direction
+
+### Potential future additions:
+
     • Python-based analysis tools 
     • backtesting engine 
     • statistical signal tuning 
     • improved liquidity modeling 
     • multi-order strategies 
 
-Author
+### Author
+
 Eric S. Hamilton
+
 Built as a learning and experimental project.
