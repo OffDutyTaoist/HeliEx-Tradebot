@@ -188,10 +188,13 @@ Setup
 
 ### Create a .env file:
 
-`HELIX_API_KEY=your_key
-HELIX_API_SECRET=your_secret
-TRADING_ENABLED=false
-LIVE_CONFIRMATION=false`
+`HELIX_API_KEY=your_key`
+
+`HELIX_API_SECRET=your_secret`
+
+`TRADING_ENABLED=false`
+
+`LIVE_CONFIRMATION=false`
 
 ## Usage Philosophy
 
