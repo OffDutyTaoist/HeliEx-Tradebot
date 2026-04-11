@@ -82,13 +82,13 @@ Additional protections include:
 ## Testing Tools
 ### Dry Run Execution
 
-npm run run:execution
+`npm run run:execution`
 
 Simulates a full trading cycle without placing orders.
 
 ### Live Readiness Check
 
-npm run live:readiness
+`npm run live:readiness`
 
 Outputs:
     • PASS/FAIL checks 
@@ -97,25 +97,25 @@ Outputs:
     
 ### Strategy Testing
 
-npm run test:strategy
+`npm run test:strategy`
 
 Tests decision logic against mock scenarios.
 
 ### Reconciliation Testing
 
-npm run test:reconciliation
+`npm run test:reconciliation`
 
 Validates order state classification.
 
 ### Private API Test
 
-npm run test:private
+`npm run test:private`
 
 Verifies balances and order access.
 
 ### Trade Flow Test
 
-npm run test:trade
+`npm run test:trade`
 
 Places and cancels a small test order.
 
@@ -125,21 +125,25 @@ Market and signal data can be logged to JSONL.
 
 ### Analysis Tool
 
-npm run analyze
+`npm run analyze`
 
 Provides:
+
     • average spread 
     • signal distribution 
     • score statistics 
     • candidate frequency 
 
-Exchange Behavior Handling
+### Exchange Behavior Handling
 
 The bot detects and handles exchange outages, including:
+
     • Cloudflare tunnel failures 
     • HTTP 530 errors 
     • HTML error responses instead of JSON 
+    
 In these cases:
+
     • Execution aborts cleanly 
     • Readiness returns LIVE READY: no 
     • No trading actions are attempted 
@@ -180,14 +184,14 @@ Setup
 
 ### Install dependencies:
 
-npm install
+`npm install`
 
 ### Create a .env file:
 
-HELIX_API_KEY=your_key
+`HELIX_API_KEY=your_key
 HELIX_API_SECRET=your_secret
 TRADING_ENABLED=false
-LIVE_CONFIRMATION=false
+LIVE_CONFIRMATION=false`
 
 ## Usage Philosophy
 
