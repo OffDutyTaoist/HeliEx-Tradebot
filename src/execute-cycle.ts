@@ -25,6 +25,56 @@ function getAvailableGrcBalance(balances: Balance[]): number {
   return grc ? Number(grc.available) : 0
 }
 
+function logEntryGeometry(
+  plan:
+    | { action: 'place_buy'; price: string; amount: string }
+    | { action: 'replace_existing'; newPrice: string; newAmount: string }
+    | { action: string },
+  snapshot: {
+    bestAsk: number
+    spread: number
+    lastTradePrice: number | null
+  }
+): void {
+  if (plan.action !== 'place_buy' && plan.action !== 'replace_existing') {
+    console.log('\n--- Entry Geometry ---')
+    console.log('No entry geometry available because no actionable order was produced.')
+    return
+  }
+
+  const targetPrice =
+    plan.action === 'place_buy' ? Number(plan.price) : Number(plan.newPrice)
+  const targetAmount =
+    plan.action === 'place_buy' ? Number(plan.amount) : Number(plan.newAmount)
+
+  const orderCost = calculateOrderCost(
+    targetPrice.toFixed(8),
+    targetAmount.toFixed(8)
+  )
+
+  const askDistance =
+    snapshot.lastTradePrice === null
+      ? null
+      : snapshot.bestAsk - snapshot.lastTradePrice
+
+  const wouldCross = targetPrice >= snapshot.bestAsk
+
+  console.log('\n--- Entry Geometry ---')
+  console.log(`Target buy price: ${targetPrice.toFixed(8)}`)
+  console.log(`Best ask: ${snapshot.bestAsk.toFixed(8)}`)
+  console.log(`Spread: ${snapshot.spread.toFixed(8)}`)
+
+  if (askDistance === null) {
+    console.log('Ask distance from last trade: n/a')
+  } else {
+    console.log(`Ask distance from last trade: ${askDistance.toFixed(8)}`)
+  }
+
+  console.log(`Order amount: ${targetAmount.toFixed(8)} CURE`)
+  console.log(`Order cost: ${orderCost.toFixed(8)} GRC`)
+  console.log(`Classification: ${wouldCross ? 'crossing' : 'resting'}`)
+}
+
 function canActNow(): { allowed: boolean; reason?: string } {
   const lastActionTime = getLastActionTime()
   const elapsed = Date.now() - lastActionTime
@@ -100,6 +150,12 @@ async function main(): Promise<void> {
 
   console.log('\n--- Execution Plan ---')
   console.log(plan)
+
+  console.log('\n--- Decision Gate ---')
+  console.log(`Action: ${plan.action}`)
+  console.log(`Reason: ${'reason' in plan ? plan.reason : 'n/a'}`)
+
+  logEntryGeometry(plan, snapshot)
 
   const actionCheck = canActNow()
 

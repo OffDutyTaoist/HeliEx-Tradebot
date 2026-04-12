@@ -6,7 +6,7 @@ export const runtimeConfig = {
   liveConfirmation: process.env.LIVE_CONFIRMATION === 'true',
   strategyName: 'PrivateStrategy',
   minPrivateScore: 40,
-  maxTradeAgeMs: 5 * 60 * 1000,
+  maxTradeAgeMs: 180_000,
   maxOpenBuyOrders: 1,
   minSpread: 0.10,
   targetSpread: 0.20,
