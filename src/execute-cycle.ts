@@ -89,13 +89,26 @@ function canActNow(): { allowed: boolean; reason?: string } {
   return { allowed: true }
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function findOrderById(
+  orders: Array<{ id: number | string }>,
+  orderId: number | string
+) {
+  return orders.find((order) => String(order.id) === String(orderId))
+}
+
 function logPreflight(): void {
   console.log('--- Preflight ---')
   console.log(`Mode: ${runtimeConfig.dryRun ? 'DRY RUN' : 'LIVE'}`)
   console.log(`Trading enabled: ${runtimeConfig.tradingEnabled ? 'yes' : 'no'}`)
   console.log(`Live confirmation: ${runtimeConfig.liveConfirmation ? 'yes' : 'no'}`)
+  console.log(`Live test mode: ${runtimeConfig.liveTestMode ? 'yes' : 'no'}`)
   console.log(`Max GRC per order: ${runtimeConfig.maxGrcPerOrder}`)
   console.log(`Cooldown: ${runtimeConfig.cooldownMs / 1000}s`)
+  console.log(`Max order age: ${runtimeConfig.maxOrderAgeMs / 1000}s`)
   console.log(`Strategy: ${runtimeConfig.strategyName}`)
   console.log(`Min private score: ${runtimeConfig.minPrivateScore}`)
   console.log(`Max trade age: ${runtimeConfig.maxTradeAgeMs / 1000}s`)
@@ -230,6 +243,57 @@ async function main(): Promise<void> {
 
       console.log('\n--- Buy Order Placed ---')
       console.log(placed)
+      console.log(`Placed order ID: ${placed.id}`)
+
+      const placedAt = Date.now()
+      const deadline = placedAt + runtimeConfig.maxOrderAgeMs
+      let firstSeenAt: number | null = null
+
+      while (Date.now() < deadline) {
+        await sleep(5000)
+
+        const latestOrders = await getMyOrders()
+        const liveOrder = findOrderById(latestOrders, placed.id)
+
+        if (liveOrder && firstSeenAt === null) {
+          firstSeenAt = Date.now()
+          console.log('\nOrder observed in exchange state.')
+          console.log(`placement_to_visible_ms=${firstSeenAt - placedAt}`)
+        }
+
+        if (!liveOrder) {
+          console.log('\nOrder no longer present in open/order state before timeout.')
+          break
+        }
+
+        console.log('\n--- Live Test Poll ---')
+        console.log(liveOrder)
+      }
+
+      const finalOrders = await getMyOrders()
+      const finalOpen = findOrderById(finalOrders, placed.id)
+
+      if (finalOpen) {
+        console.log('\n--- Timed Cancel ---')
+        console.log(
+          `Order still open after ${runtimeConfig.maxOrderAgeMs / 1000}s, cancelling...`
+        )
+
+        const cancelResult = await cancelOrder(placed.id)
+        console.log(cancelResult)
+
+        const afterCancelOrders = await getMyOrders()
+        const afterCancel = findOrderById(afterCancelOrders, placed.id)
+
+        console.log('\n--- Final State ---')
+        console.log(
+          afterCancel ?? 'Order no longer present in open/order state after cancel.'
+        )
+      } else {
+        console.log('\n--- Final State ---')
+        console.log('Order was no longer open before timed cancel.')
+      }
+
       return
     }
 
