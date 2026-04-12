@@ -117,6 +117,10 @@ function logPreflight(): void {
   if (!runtimeConfig.dryRun && runtimeConfig.tradingEnabled) {
     console.log('WARNING: LIVE TRADING IS ENABLED')
   }
+
+  if (runtimeConfig.liveTestMode) {
+    console.log('TEST MODE: single-cycle live order lifecycle validation')
+  }
 }
 
 async function main(): Promise<void> {
@@ -230,6 +234,74 @@ async function main(): Promise<void> {
 
       if (runtimeConfig.dryRun) {
         console.log('\nDRY RUN: would place buy order now.')
+        return
+      }
+
+      if (runtimeConfig.liveTestMode) {
+        const placed = await placeOrder({
+          side: 'buy',
+          price: plan.price,
+          amount: plan.amount,
+        })
+
+        setLastActionTime(Date.now())
+
+        console.log('\n--- Buy Order Placed ---')
+        console.log(placed)
+        console.log(`Placed order ID: ${placed.id}`)
+
+        const placedAt = Date.now()
+        const deadline = placedAt + runtimeConfig.maxOrderAgeMs
+        let firstSeenAt: number | null = null
+
+        while (Date.now() < deadline) {
+          await sleep(5000)
+
+          const latestOrders = await getMyOrders()
+          const liveOrder = findOrderById(latestOrders, placed.id)
+
+          if (liveOrder && firstSeenAt === null) {
+            firstSeenAt = Date.now()
+            console.log('\nOrder observed in exchange state.')
+            console.log(`placement_to_visible_ms=${firstSeenAt - placedAt}`)
+          }
+
+          if (!liveOrder) {
+            console.log('\nOrder no longer present in open/order state before timeout.')
+            console.log('final_state: gone_before_timeout')
+            return
+          }
+
+          console.log('\n--- Live Test Poll ---')
+          console.log(liveOrder)
+        }
+
+        const finalOrders = await getMyOrders()
+        const finalOpen = findOrderById(finalOrders, placed.id)
+
+        if (finalOpen) {
+          console.log('\n--- Timed Cancel ---')
+          console.log(
+            `Order still open after ${runtimeConfig.maxOrderAgeMs / 1000}s, cancelling...`
+          )
+
+          const cancelResult = await cancelOrder(placed.id)
+          console.log(cancelResult)
+
+          const afterCancelOrders = await getMyOrders()
+          const afterCancel = findOrderById(afterCancelOrders, placed.id)
+
+          console.log('\n--- Final State ---')
+          console.log(
+            afterCancel ?? 'Order no longer present in open/order state after cancel.'
+          )
+          console.log('final_state: open_timeout_cancelled')
+          return
+        }
+
+        console.log('\n--- Final State ---')
+        console.log('Order was no longer open before timed cancel.')
+        console.log('final_state: gone_before_timeout')
         return
       }
 
