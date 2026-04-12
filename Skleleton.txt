@@ -1,134 +1,198 @@
-﻿Phase 0.5: venue adapter and market graph foundation
-
-Status: now
-  • canonical asset model
-  • canonical market model
-  • venue adapter interface
-  • public market data integration
-  • symbol normalization
-  • market graph builder
-  • route candidate discovery
-
-Supported venue roles
-  • Robinhood: reference / major market venue
-  • Coinbase: reference / major market venue
-  • SafeTrade: GRC execution + market data venue
-  • AltQuick: CURE market data venue
-  • HeliEx: optional direct GRC/CURE execution venue
-
-Phase 1: private read access
+﻿Phase 1: private read access
 
 Status: complete enough
-  • balances ✅
-  • orders ✅
-  • auth/signing ✅
+    • balances ✅ 
+    • orders ✅ 
+    • auth/signing ✅ 
 
-Optional later
-  • own trade history endpoint
-  • normalized fills/trade history
-  • fee discovery
-  • deposit/withdraw capability discovery
+Optional later:
+    • own trade history endpoint 
 
 Phase 2: smallest possible write action
 
 Status: complete
-  • tiny limit order placed ✅
-  • visible in exchange state ✅
-  • cancelled cleanly ✅
-  • terminal state confirmed ✅
+    • tiny limit order placed ✅ 
+    • visible in exchange state ✅ 
+    • cancelled cleanly ✅ 
+    • terminal state confirmed ✅ 
 
 Phase 3: reconciliation and safety
 
 Status: strong
-  • dry-run execution ✅
-  • strategy split ✅
-  • private veto layer ✅
-  • reconciliation helpers ✅
-  • reconciliation harness ✅
-  • strategy harness ✅
-  • spend cap ✅
-  • stale trade rejection ✅
-  • partial fill protection ✅
-  • preflight output ✅
-  • shared runtime config ✅
-  • triple live latch ✅
+
+    • dry-run execution ✅ 
+    • strategy split ✅ 
+    • private veto layer ✅ 
+    • reconciliation helpers ✅ 
+    • reconciliation harness ✅ 
+    • strategy harness ✅ 
+    • spend cap ✅ 
+    • stale trade rejection ✅ 
+    • partial fill protection ✅ 
+    • preflight output ✅ 
+    • shared runtime config ✅ 
+    • triple live latch ✅ 
 
 Phase 3.5: degraded-mode / outage handling
 
 Status: complete first pass
-  • normalize Cloudflare tunnel failures ✅
-  • concise outage handling in execution ✅
-  • concise outage handling in readiness ✅
-
-Expand with
-  • rate-limit normalization
-  • auth failure normalization
-  • malformed response normalization
-  • market unavailable normalization
+    • normalize Cloudflare tunnel failures ✅ 
+    • concise outage handling in execution ✅ 
+    • concise outage handling in readiness ✅ 
 
 Phase 4: supervised live micro-trade
 
 Status: ready to execute
-  • venue-scoped live test mode
-  • single-cycle only
-  • no loop
-  • no retries
-  • forced cancel after timeout
-  • maxConcurrentOrders = 1
 
-Add before first live run
-  • entry geometry output
-  • timed cancel logic
-  • TEST MODE banner
+Add before first live run (NEW — required)
+Observability / clarity
+    • entry geometry output
+        ◦ bid target 
+        ◦ best ask 
+        ◦ spread 
+        ◦ distance from last trade 
+        ◦ order cost 
+        ◦ resting vs crossing classification 
 
-Phase 4.5: live validation & telemetry
+Lifecycle control
+    • maxOrderAgeMs (e.g. 180000 ms) 
+    • timed cancel logic 
+    • explicit “TEST MODE” log banner 
+
+Execution discipline
+    • single-cycle execution mode 
+    • no loop 
+    • no auto-replace 
+    • no retries 
+
+Execution safety
+
+    maxConcurrentOrders = 1 (hard guard)
+
+First live test profile (codified)
+
+Intent:
+Validate order lifecycle, not profit.
+
+Parameters:
+    • size: 0.1 CURE (or smaller if allowed) 
+    • cap: ≤ 0.25 GRC 
+    • price: current strategy (resting bid) 
+    • timeout: 180s 
+    • actions: 
+        1. place 
+            1.1 log order ID immediately after placement
+        2. poll 
+        3. cancel if open 
+        4. log final state 
+
+Expected outcomes:
+    • order appears on exchange 
+    • reconciliation sees it 
+    • cancel works 
+    • terminal state logged 
+
+Phase 4.5: live validation & telemetry (NEW)
 
 Status: immediately after first live test
-  • execution outcome classification
-  • placement latency tracking
-  • cancel latency tracking
-  • order lifecycle timeline
-  • exchange echo verification
-  • explicit LIVE TEST MODE output
+
+Goals
+    • confirm system correctness under live conditions 
+    • capture real exchange behavior 
+    • validate assumptions about HeliEx 
+
+Add:
+    • execution outcome classification: 
+        ◦ placed_only 
+        ◦ partial_fill 
+        ◦ full_fill 
+        ◦ cancelled_timeout 
+    • latency tracking: 
+        ◦ placement → visible 
+        ◦ cancel → confirmed 
+    • order lifecycle timeline: 
+        ◦ placed_at 
+        ◦ first_seen_at 
+        ◦ cancelled_at 
+        ◦ final_state 
+            Output example:
+
+            --- Live Test Result ---
+            placement_latency_ms: X
+            cancel_latency_ms: Y
+            filled_amount: Z
+            final_state: cancelled_timeout
+    • exchange echo verification: 
+        ◦ confirm returned order matches 
+            ◦ price
+            ◦ amount
+            ◦ side
+    • “LIVE TEST MODE”
+        ◦ Define explicitly:
+            ◦ live API calls enabled
+            ◦ single-cycle only
+            ◦ forced cancel after timeout
+            ◦ no loops
+            ◦ no persistence
+            ◦ no strategy evolution
 
 Phase 5: private strategy hardening
 
 Status: started
-  • private strategy module exists ✅
-  • score veto exists ✅
+    • private strategy module exists ✅ 
+    • score veto exists ✅ 
+    • classify market regimes: 
+        ◦ thin_static (your current one) 
+        ◦ thin_active 
+        ◦ wide_spread_idle 
+    • adapt thresholds per regime 
+    • introduce entry style modes: 
+        ◦ passive (resting) 
+        ◦ semi-aggressive (slightly improved bid) 
+        ◦ opportunistic (only when spread collapses) 
 
-5A venue-local strategy
-  • classify local market regimes
-  • adapt thresholds per regime
-  • passive / semi-aggressive / opportunistic entry styles
+Next likely work:
+    • adapt tolerances to actual HeliEx liquidity 
+    • maybe separate public example strategy from private real strategy 
+    • separate “signal validity” from “execution desirability”
+        ◦ Right now:
 
-5B cross-venue route intelligence
-  • implied cross-price calculation
-  • route viability scoring
-  • liquidity-aware path rejection
-  • separate signal validity from execution desirability
+        candidate → immediately place order
+
+        ◦ Desired:
+
+        candidate → evaluate should we actually engage this market?
 
 Phase 6: operator tooling / sustained automation
 
 Status: later
-  • looped readiness / scanner mode
-  • alerting
-  • service supervision
-  • persistent cooldown/state
-  • richer order lifecycle handling
-  • kill switch
-  • pause switch
+    • looped readiness/execution 
+    • alerting 
+    • service supervision 
+    • persistent cooldown/state 
+    • richer order lifecycle handling
+    • state persistence 
+        ◦ last order ID 
+        ◦ last action time 
+        ◦ cooldown tracking across runs 
+    • manual override switch(3am drunk high you is going to love this): 
+        ◦ kill switch
+        ◦ pause trading without killing process
 
-Phase 7: interface layer (future GUI / Python bridge)
+Phase 7 (NEW): interface layer (future GUI / Python bridge)
 
-Status: lightweight start now
-  • structured JSON output
-  • command flags:
-      --once
-      --sample
-      --live-test
-      --venue=<name>
-      --scan-routes
-      --jsonl
-  • clean core / CLI separation
-  • machine-readable event stream
+Goal:
+Make bot controllable from outside TS
+Add now (lightweight):
+    • structured JSON output mode 
+    • command flags: 
+        ◦ --once 
+        ◦ --sample 
+        ◦ --live-test 
+    • clean separation: 
+        ◦ core logic 
+        ◦ CLI runner
+    • machine-readable event stream: 
+        ◦ JSON lines output
+        ◦ one event per line
+

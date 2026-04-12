@@ -1,5 +1,6 @@
 import type { MarketSnapshot } from './market.js'
 import type { WalletStatus } from './types.js'
+import { runtimeConfig } from './runtime-config.js'
 
 export type MarketState =
   | 'candidate'
@@ -16,31 +17,26 @@ export type TradeSignal = {
   score: number
 }
 
-const MIN_SPREAD = 0.10
-const TARGET_SPREAD = 0.20
-const MIN_TOP_BOOK_AMOUNT = 1.0
-const TARGET_TOP_BOOK_AMOUNT = 5.0
-const MAX_ASK_DISTANCE_FROM_LAST_TRADE = 0.15
-const MAX_BID_DISTANCE_FROM_LAST_TRADE = 0.15
-const MAX_SPREAD = 1.0
-
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max)
 }
 
 function scoreSpread(spread: number): number {
-  if (spread < MIN_SPREAD) return 0
-  if (spread >= TARGET_SPREAD) return 40
+  if (spread < runtimeConfig.minSpread) return 0
+  if (spread >= runtimeConfig.targetSpread) return 40
 
-  const ratio = (spread - MIN_SPREAD) / (TARGET_SPREAD - MIN_SPREAD)
+  const ratio =
+    (spread - runtimeConfig.minSpread) /
+    (runtimeConfig.targetSpread - runtimeConfig.minSpread)
+
   return Math.round(ratio * 40)
 }
 
 function scoreLiquidity(amount: number): number {
   if (amount <= 0) return 0
-  if (amount >= TARGET_TOP_BOOK_AMOUNT) return 20
+  if (amount >= runtimeConfig.targetTopBookAmount) return 20
 
-  return Math.round((amount / TARGET_TOP_BOOK_AMOUNT) * 20)
+  return Math.round((amount / runtimeConfig.targetTopBookAmount) * 20)
 }
 
 function scoreDistance(distance: number, maxDistance: number): number {
@@ -95,18 +91,18 @@ export function evaluateSignal(
   }
 
   if (
-    snapshot.bestBidAmount < MIN_TOP_BOOK_AMOUNT ||
-    snapshot.bestAskAmount < MIN_TOP_BOOK_AMOUNT
+    snapshot.bestBidAmount < runtimeConfig.minTopBookAmount ||
+    snapshot.bestAskAmount < runtimeConfig.minTopBookAmount
   ) {
-    if (snapshot.bestBidAmount < MIN_TOP_BOOK_AMOUNT) {
+    if (snapshot.bestBidAmount < runtimeConfig.minTopBookAmount) {
       reasons.push(
-        `Best bid liquidity too small (${snapshot.bestBidAmount.toFixed(8)} < ${MIN_TOP_BOOK_AMOUNT.toFixed(8)})`
+        `Best bid liquidity too small (${snapshot.bestBidAmount.toFixed(8)} < ${runtimeConfig.minTopBookAmount.toFixed(8)})`
       )
     }
 
-    if (snapshot.bestAskAmount < MIN_TOP_BOOK_AMOUNT) {
+    if (snapshot.bestAskAmount < runtimeConfig.minTopBookAmount) {
       reasons.push(
-        `Best ask liquidity too small (${snapshot.bestAskAmount.toFixed(8)} < ${MIN_TOP_BOOK_AMOUNT.toFixed(8)})`
+        `Best ask liquidity too small (${snapshot.bestAskAmount.toFixed(8)} < ${runtimeConfig.minTopBookAmount.toFixed(8)})`
       )
     }
 
@@ -123,9 +119,9 @@ export function evaluateSignal(
     }
   }
 
-  if (snapshot.spread < MIN_SPREAD) {
+  if (snapshot.spread < runtimeConfig.minSpread) {
     reasons.push(
-      `Spread too small (${snapshot.spread.toFixed(8)} < ${MIN_SPREAD.toFixed(8)})`
+      `Spread too small (${snapshot.spread.toFixed(8)} < ${runtimeConfig.minSpread.toFixed(8)})`
     )
 
     const score =
@@ -141,9 +137,9 @@ export function evaluateSignal(
     }
   }
 
-  if (snapshot.spread > MAX_SPREAD) {
+  if (snapshot.spread > runtimeConfig.maxSpread) {
     reasons.push(
-      `Spread too large to trust (${snapshot.spread.toFixed(8)} > ${MAX_SPREAD.toFixed(8)})`
+      `Spread too large to trust (${snapshot.spread.toFixed(8)} > ${runtimeConfig.maxSpread.toFixed(8)})`
     )
 
     const score =
@@ -178,18 +174,18 @@ export function evaluateSignal(
   const bidDistance = snapshot.lastTradePrice - snapshot.bestBid
 
   if (
-    askDistance > MAX_ASK_DISTANCE_FROM_LAST_TRADE ||
-    bidDistance > MAX_BID_DISTANCE_FROM_LAST_TRADE
+    askDistance > runtimeConfig.maxAskDistanceFromLastTrade ||
+    bidDistance > runtimeConfig.maxBidDistanceFromLastTrade
   ) {
-    if (askDistance > MAX_ASK_DISTANCE_FROM_LAST_TRADE) {
+    if (askDistance > runtimeConfig.maxAskDistanceFromLastTrade) {
       reasons.push(
-        `Best ask too far above last trade (${askDistance.toFixed(8)} > ${MAX_ASK_DISTANCE_FROM_LAST_TRADE.toFixed(8)})`
+        `Best ask too far above last trade (${askDistance.toFixed(8)} > ${runtimeConfig.maxAskDistanceFromLastTrade.toFixed(8)})`
       )
     }
 
-    if (bidDistance > MAX_BID_DISTANCE_FROM_LAST_TRADE) {
+    if (bidDistance > runtimeConfig.maxBidDistanceFromLastTrade) {
       reasons.push(
-        `Best bid too far below last trade (${bidDistance.toFixed(8)} > ${MAX_BID_DISTANCE_FROM_LAST_TRADE.toFixed(8)})`
+        `Best bid too far below last trade (${bidDistance.toFixed(8)} > ${runtimeConfig.maxBidDistanceFromLastTrade.toFixed(8)})`
       )
     }
 
@@ -197,8 +193,8 @@ export function evaluateSignal(
       scoreSpread(snapshot.spread) +
       scoreLiquidity(snapshot.bestBidAmount) +
       scoreLiquidity(snapshot.bestAskAmount) +
-      scoreDistance(askDistance, MAX_ASK_DISTANCE_FROM_LAST_TRADE) +
-      scoreDistance(bidDistance, MAX_BID_DISTANCE_FROM_LAST_TRADE)
+      scoreDistance(askDistance, runtimeConfig.maxAskDistanceFromLastTrade) +
+      scoreDistance(bidDistance, runtimeConfig.maxBidDistanceFromLastTrade)
 
     return {
       shouldTrade: false,
@@ -212,8 +208,8 @@ export function evaluateSignal(
     scoreSpread(snapshot.spread) +
     scoreLiquidity(snapshot.bestBidAmount) +
     scoreLiquidity(snapshot.bestAskAmount) +
-    scoreDistance(askDistance, MAX_ASK_DISTANCE_FROM_LAST_TRADE) +
-    scoreDistance(bidDistance, MAX_BID_DISTANCE_FROM_LAST_TRADE)
+    scoreDistance(askDistance, runtimeConfig.maxAskDistanceFromLastTrade) +
+    scoreDistance(bidDistance, runtimeConfig.maxBidDistanceFromLastTrade)
 
   return {
     shouldTrade: true,

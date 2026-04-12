@@ -1,5 +1,4 @@
 import type { ExecutionPlan } from '../execution.js'
-import type { StrategyContext, TradingStrategy } from './base-strategy.js'
 import type { StrategyContext, TradingStrategy } from './types.js'
 import { findActiveBuyOrder } from '../reconciliation.js'
 

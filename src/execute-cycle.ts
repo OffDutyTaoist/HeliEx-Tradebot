@@ -47,6 +47,9 @@ function logPreflight(): void {
   console.log(`Max GRC per order: ${runtimeConfig.maxGrcPerOrder}`)
   console.log(`Cooldown: ${runtimeConfig.cooldownMs / 1000}s`)
   console.log(`Strategy: ${runtimeConfig.strategyName}`)
+  console.log(`Min private score: ${runtimeConfig.minPrivateScore}`)
+  console.log(`Max trade age: ${runtimeConfig.maxTradeAgeMs / 1000}s`)
+  console.log(`Max open buy orders: ${runtimeConfig.maxOpenBuyOrders}`)
 
   if (!runtimeConfig.dryRun && runtimeConfig.tradingEnabled) {
     console.log('WARNING: LIVE TRADING IS ENABLED')

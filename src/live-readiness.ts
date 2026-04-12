@@ -54,6 +54,24 @@ async function main(): Promise<void> {
   console.log('\n--- Strategy Plan ---')
   console.log(plan)
 
+  console.log('\n--- Runtime Config ---')
+  console.log(`Dry run: ${runtimeConfig.dryRun}`)
+  console.log(`Trading enabled: ${runtimeConfig.tradingEnabled}`)
+  console.log(`Live confirmation: ${runtimeConfig.liveConfirmation}`)
+  console.log(`Max GRC per order: ${runtimeConfig.maxGrcPerOrder}`)
+  console.log(`Cooldown: ${runtimeConfig.cooldownMs / 1000}s`)
+  console.log(`Strategy: ${runtimeConfig.strategyName}`)
+  console.log(`Min private score: ${runtimeConfig.minPrivateScore}`)
+  console.log(`Max trade age: ${runtimeConfig.maxTradeAgeMs / 1000}s`)
+  console.log(`Max open buy orders: ${runtimeConfig.maxOpenBuyOrders}`)
+  console.log(`Min spread: ${runtimeConfig.minSpread}`)
+  console.log(`Target spread: ${runtimeConfig.targetSpread}`)
+  console.log(`Min top book amount: ${runtimeConfig.minTopBookAmount}`)
+  console.log(`Target top book amount: ${runtimeConfig.targetTopBookAmount}`)
+  console.log(`Max ask distance from last trade: ${runtimeConfig.maxAskDistanceFromLastTrade}`)
+  console.log(`Max bid distance from last trade: ${runtimeConfig.maxBidDistanceFromLastTrade}`)
+  console.log(`Max spread: ${runtimeConfig.maxSpread}`)
+
   console.log('\n--- Readiness Checks ---')
 
   const checks = [
