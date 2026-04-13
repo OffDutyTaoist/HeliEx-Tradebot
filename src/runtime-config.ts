@@ -1,5 +1,5 @@
 export const runtimeConfig = {
-  dryRun: true,
+  dryRun: false,
   maxGrcPerOrder: 0.25,
   cooldownMs: 30_000,
   maxOrderAgeMs: 180_000,
