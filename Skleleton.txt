@@ -1,101 +1,134 @@
-﻿Phase 1: private connectivity and account access
-Objective: prove the bot can authenticate and read account state.
-Done
-    • read balances 
-    • read orders 
-    • verify signing/auth model 
-Remaining
-    • read own trade history, if endpoint exists and is useful 
-Exit criteria
-    • bot can read all account data needed for safe trading 
-Status: 90%
+﻿Phase 0.5: venue adapter and market graph foundation
 
-Phase 2: minimal write proof
-Objective: prove the bot can place and cancel safely.
-Done
-    • place tiny limit buy 
-    • verify order appears 
-    • cancel order 
-    • verify status becomes cancelled 
-Exit criteria
-    • write path proven safe at tiny size 
-Status: 100%
+Status: now
+  • canonical asset model
+  • canonical market model
+  • venue adapter interface
+  • public market data integration
+  • symbol normalization
+  • market graph builder
+  • route candidate discovery
 
-Phase 3: execution and reconciliation
-Objective: make the bot safe enough to manage order lifecycle.
-Done
-    • execution planning 
-    • dry-run executor 
-    • spend cap 
-    • buy-side only plan 
-    • open-order filtering 
-    • private strategy veto layer 
-Remaining
-    • active order polling 
-    • partial fill handling 
-    • stale order replacement rules 
-    • local/exchange state reconciliation 
-    • cooldowns and anti-thrash behavior 
-    • max active order count 
-    • stale market data checks 
-    • recovery from interrupted execution 
-Exit criteria
-    • bot can place, observe, update, cancel, and recover without getting confused 
-Status: 45%
+Supported venue roles
+  • Robinhood: reference / major market venue
+  • Coinbase: reference / major market venue
+  • SafeTrade: GRC execution + market data venue
+  • AltQuick: CURE market data venue
+  • HeliEx: optional direct GRC/CURE execution venue
 
-Phase 4: guarded live automation
-Objective: allow small real automated actions under strict controls.
-Prereqs
-    • Phase 3 substantially complete 
-    • conservative signal thresholds restored 
-    • private strategy file separated and protected 
-    • dry-run and live modes clearly switchable 
-Initial scope
-    • one live execution cycle at a time 
-    • tiny buy orders only 
-    • no loops 
-    • no sells 
-    • no market orders 
-Exit criteria
-    • repeated tiny live cycles behave predictably 
-Status: 0%
+Phase 1: private read access
 
-Phase 5: strategy hardening
-Objective: improve edge without exposing the playbook.
-Includes
-    • private strategy logic 
-    • score gating 
-    • timing/cadence rules 
-    • size logic 
-    • replacement logic 
-    • stealthier behavior patterns 
-Exit criteria
-    • private strategy improves decision quality without destabilizing execution 
-Status: started in skeleton form
+Status: complete enough
+  • balances ✅
+  • orders ✅
+  • auth/signing ✅
 
-Phase 6: automation loop and operator tooling
-Objective: make it practical to run.
-Includes
-    • polling loop for execution 
-    • log-driven analytics 
-    • optional alerts for operator awareness 
-    • health checks 
-    • kill switch 
-    • cooldowns 
-    • maybe systemd/tmux wrapper later 
-Exit criteria
-    • bot can run under supervision without constant babysitting 
-Status: not started
+Optional later
+  • own trade history endpoint
+  • normalized fills/trade history
+  • fee discovery
+  • deposit/withdraw capability discovery
 
-Immediate next objectives
-    1. restore your real signal thresholds after the temporary .02 test 
-    2. harden Phase 3 reconciliation 
-    3. separate placeholder vs private strategy file cleanly 
-    4. add live safety rails before any automated live order 
-Specifically:
-    • max open buy orders = 1 
-    • last trade freshness check 
-    • minimum cooldown between replacements 
-    • partial fill awareness 
-    • cancel-and-replace reconciliation 
-    • live mode guard with tiny cap 
+Phase 2: smallest possible write action
+
+Status: complete
+  • tiny limit order placed ✅
+  • visible in exchange state ✅
+  • cancelled cleanly ✅
+  • terminal state confirmed ✅
+
+Phase 3: reconciliation and safety
+
+Status: strong
+  • dry-run execution ✅
+  • strategy split ✅
+  • private veto layer ✅
+  • reconciliation helpers ✅
+  • reconciliation harness ✅
+  • strategy harness ✅
+  • spend cap ✅
+  • stale trade rejection ✅
+  • partial fill protection ✅
+  • preflight output ✅
+  • shared runtime config ✅
+  • triple live latch ✅
+
+Phase 3.5: degraded-mode / outage handling
+
+Status: complete first pass
+  • normalize Cloudflare tunnel failures ✅
+  • concise outage handling in execution ✅
+  • concise outage handling in readiness ✅
+
+Expand with
+  • rate-limit normalization
+  • auth failure normalization
+  • malformed response normalization
+  • market unavailable normalization
+
+Phase 4: supervised live micro-trade
+
+Status: ready to execute
+  • venue-scoped live test mode
+  • single-cycle only
+  • no loop
+  • no retries
+  • forced cancel after timeout
+  • maxConcurrentOrders = 1
+
+Add before first live run
+  • entry geometry output
+  • timed cancel logic
+  • TEST MODE banner
+
+Phase 4.5: live validation & telemetry
+
+Status: immediately after first live test
+  • execution outcome classification
+  • placement latency tracking
+  • cancel latency tracking
+  • order lifecycle timeline
+  • exchange echo verification
+  • explicit LIVE TEST MODE output
+
+Phase 5: private strategy hardening
+
+Status: started
+  • private strategy module exists ✅
+  • score veto exists ✅
+
+5A venue-local strategy
+  • classify local market regimes
+  • adapt thresholds per regime
+  • passive / semi-aggressive / opportunistic entry styles
+
+5B cross-venue route intelligence
+  • implied cross-price calculation
+  • route viability scoring
+  • liquidity-aware path rejection
+  • separate signal validity from execution desirability
+
+Phase 6: operator tooling / sustained automation
+
+Status: later
+  • looped readiness / scanner mode
+  • alerting
+  • service supervision
+  • persistent cooldown/state
+  • richer order lifecycle handling
+  • kill switch
+  • pause switch
+
+Phase 7: interface layer (future GUI / Python bridge)
+
+Status: lightweight start now
+  • structured JSON output
+  • command flags:
+      --once
+      --sample
+      --live-test
+      --venue=<name>
+      --scan-routes
+      --jsonl
+  • clean core / CLI separation
+  • machine-readable event stream
