@@ -75,20 +75,6 @@ function logEntryGeometry(
   console.log(`Classification: ${wouldCross ? 'crossing' : 'resting'}`)
 }
 
-function canActNow(): { allowed: boolean; reason?: string } {
-  const lastActionTime = getLastActionTime()
-  const elapsed = Date.now() - lastActionTime
-
-  if (lastActionTime > 0 && elapsed < runtimeConfig.cooldownMs) {
-    return {
-      allowed: false,
-      reason: `Cooldown active (${Math.ceil((runtimeConfig.cooldownMs - elapsed) / 1000)}s remaining)`,
-    }
-  }
-
-  return { allowed: true }
-}
-
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
@@ -121,6 +107,36 @@ function logPreflight(): void {
   if (runtimeConfig.liveTestMode) {
     console.log('TEST MODE: single-cycle live order lifecycle validation')
   }
+}
+
+function getFilledAmount(order: { amount: string; remaining: string }): number {
+  return Number(order.amount) - Number(order.remaining)
+}
+
+function logLiveTestResult(args: {
+  placedAt: number
+  firstSeenAt: number | null
+  cancelledAt: number | null
+  finalState: string
+  finalObservedOrder: { amount: string; remaining: string; status?: string } | null
+}): void {
+  const placementLatencyMs =
+    args.firstSeenAt === null ? null : args.firstSeenAt - args.placedAt
+
+  const cancelLatencyMs =
+    args.cancelledAt === null ? null : Date.now() - args.cancelledAt
+
+  const filledAmount =
+  args.finalObservedOrder === null
+    ? null
+    : getFilledAmount(args.finalObservedOrder)
+
+  console.log('\n--- Live Test Result ---')
+  console.log(`placement_latency_ms: ${placementLatencyMs ?? 'n/a'}`)
+  console.log(`cancel_latency_ms: ${cancelLatencyMs ?? 'n/a'}`)
+  console.log(`filled_amount: ${filledAmount ?? 'n/a'}`)
+  console.log(`final_state: ${args.finalState}`)
+  console.log(`final_exchange_status: ${args.finalObservedOrder?.status ?? 'n/a'}`)
 }
 
 async function main(): Promise<void> {
@@ -173,8 +189,6 @@ async function main(): Promise<void> {
   console.log(`Reason: ${'reason' in plan ? plan.reason : 'n/a'}`)
 
   logEntryGeometry(plan, snapshot)
-
-  const actionCheck = canActNow()
 
   if (
   (plan.action === 'place_buy' || plan.action === 'replace_existing') &&
@@ -250,9 +264,20 @@ async function main(): Promise<void> {
         console.log(placed)
         console.log(`Placed order ID: ${placed.id}`)
 
+        console.log('\n--- Exchange Echo Verification ---')
+        console.log(`requested_price: ${plan.price}`)
+        console.log(`echo_price: ${placed.price}`)
+        console.log(`requested_amount: ${plan.amount}`)
+        console.log(`echo_amount: ${placed.amount}`)
+        console.log(`requested_side: buy`)
+        console.log(`echo_side: ${placed.side}`)
+
         const placedAt = Date.now()
-        const deadline = placedAt + runtimeConfig.maxOrderAgeMs
         let firstSeenAt: number | null = null
+        let cancelledAt: number | null = null
+        let finalState = 'unknown'
+        let finalObservedOrder: typeof placed | null = null
+        const deadline = placedAt + runtimeConfig.maxOrderAgeMs
 
         while (Date.now() < deadline) {
           await sleep(5000)
@@ -268,7 +293,17 @@ async function main(): Promise<void> {
 
           if (!liveOrder) {
             console.log('\nOrder no longer present in open/order state before timeout.')
-            console.log('final_state: gone_before_timeout')
+            finalState = 'gone_before_timeout'
+            finalObservedOrder = null
+
+            logLiveTestResult({
+              placedAt,
+              firstSeenAt,
+              cancelledAt,
+              finalState,
+              finalObservedOrder,
+            })
+
             return
           }
 
@@ -285,23 +320,45 @@ async function main(): Promise<void> {
             `Order still open after ${runtimeConfig.maxOrderAgeMs / 1000}s, cancelling...`
           )
 
+          cancelledAt = Date.now()
           const cancelResult = await cancelOrder(placed.id)
           console.log(cancelResult)
 
           const afterCancelOrders = await getMyOrders()
           const afterCancel = findOrderById(afterCancelOrders, placed.id)
+          finalObservedOrder = afterCancel ?? null
+          finalState = 'open_timeout_cancelled'
 
           console.log('\n--- Final State ---')
           console.log(
             afterCancel ?? 'Order no longer present in open/order state after cancel.'
           )
           console.log('final_state: open_timeout_cancelled')
+
+          logLiveTestResult({
+            placedAt,
+            firstSeenAt,
+            cancelledAt,
+            finalState,
+            finalObservedOrder,
+          })
+
           return
         }
 
         console.log('\n--- Final State ---')
         console.log('Order was no longer open before timed cancel.')
-        console.log('final_state: gone_before_timeout')
+        finalState = 'gone_before_timeout'
+        finalObservedOrder = null
+
+        logLiveTestResult({
+          placedAt,
+          firstSeenAt,
+          cancelledAt,
+          finalState,
+          finalObservedOrder,
+        })
+
         return
       }
 
@@ -316,56 +373,6 @@ async function main(): Promise<void> {
       console.log('\n--- Buy Order Placed ---')
       console.log(placed)
       console.log(`Placed order ID: ${placed.id}`)
-
-      const placedAt = Date.now()
-      const deadline = placedAt + runtimeConfig.maxOrderAgeMs
-      let firstSeenAt: number | null = null
-
-      while (Date.now() < deadline) {
-        await sleep(5000)
-
-        const latestOrders = await getMyOrders()
-        const liveOrder = findOrderById(latestOrders, placed.id)
-
-        if (liveOrder && firstSeenAt === null) {
-          firstSeenAt = Date.now()
-          console.log('\nOrder observed in exchange state.')
-          console.log(`placement_to_visible_ms=${firstSeenAt - placedAt}`)
-        }
-
-        if (!liveOrder) {
-          console.log('\nOrder no longer present in open/order state before timeout.')
-          break
-        }
-
-        console.log('\n--- Live Test Poll ---')
-        console.log(liveOrder)
-      }
-
-      const finalOrders = await getMyOrders()
-      const finalOpen = findOrderById(finalOrders, placed.id)
-
-      if (finalOpen) {
-        console.log('\n--- Timed Cancel ---')
-        console.log(
-          `Order still open after ${runtimeConfig.maxOrderAgeMs / 1000}s, cancelling...`
-        )
-
-        const cancelResult = await cancelOrder(placed.id)
-        console.log(cancelResult)
-
-        const afterCancelOrders = await getMyOrders()
-        const afterCancel = findOrderById(afterCancelOrders, placed.id)
-
-        console.log('\n--- Final State ---')
-        console.log(
-          afterCancel ?? 'Order no longer present in open/order state after cancel.'
-        )
-      } else {
-        console.log('\n--- Final State ---')
-        console.log('Order was no longer open before timed cancel.')
-      }
-
       return
     }
 
