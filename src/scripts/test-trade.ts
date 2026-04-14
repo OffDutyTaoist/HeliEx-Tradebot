@@ -1,5 +1,5 @@
 import 'dotenv/config'
-import { getMyOrders, placeOrder, cancelOrder } from './private-api.js'
+import { getMyOrders, placeOrder, cancelOrder } from '../private-api.js'
 
 async function main(): Promise<void> {
   console.log('Testing trade flow...\n')

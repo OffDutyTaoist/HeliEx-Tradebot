@@ -1,24 +1,25 @@
 import 'dotenv/config'
-import { getLastActionTime, setLastActionTime } from './runtime-state.js'
-import { PrivateStrategy } from './strategy/private-strategy.js'
-import { getOrderBook, getTrades, getWalletStatus } from './api.js'
+import { getLastActionTime, setLastActionTime } from '../core/runtime-state.js'
+import { PrivateStrategy } from '../strategy/private-strategy.js'
+import { getOrderBook, getTrades, getWalletStatus } from '../api.js'
 import {
   getBalances,
   getMyOrders,
   placeOrder,
   cancelOrder,
-  type Balance,
-} from './private-api.js'
-import { buildMarketSnapshot } from './market.js'
-import { evaluateSignal } from './signals.js'
-import { calculateOrderCost } from './execution.js'
+} from '../private-api.js'
+import type { Balance, MyOrder } from '../private-api.js'
+import { buildMarketSnapshot } from '../core/market.js'
+import { evaluateSignal } from '../core/signals.js'
+import { calculateOrderCost } from '../core/execution.js'
 import {
   getActiveBuyOrders,
-  getOpenBuyOrders,
   getPartialBuyOrders,
-} from './reconciliation.js'
-import { runtimeConfig } from './runtime-config.js'
-import { ExchangeUnavailableError } from './errors.js'
+  findActiveBuyOrder,
+} from '../core/reconciliation.js'
+import { runtimeConfig } from '../config/runtime.js'
+import { ExchangeUnavailableError } from '../errors.js'
+import type { ExecutionPlan } from '../core/execution.js'
 
 function getAvailableGrcBalance(balances: Balance[]): number {
   const grc = balances.find((balance) => balance.asset === 'GRC')
@@ -26,10 +27,7 @@ function getAvailableGrcBalance(balances: Balance[]): number {
 }
 
 function logEntryGeometry(
-  plan:
-    | { action: 'place_buy'; price: string; amount: string }
-    | { action: 'replace_existing'; newPrice: string; newAmount: string }
-    | { action: string },
+  plan: ExecutionPlan,
   snapshot: {
     bestAsk: number
     spread: number
@@ -42,14 +40,27 @@ function logEntryGeometry(
     return
   }
 
-  const targetPrice =
-    plan.action === 'place_buy' ? Number(plan.price) : Number(plan.newPrice)
-  const targetAmount =
-    plan.action === 'place_buy' ? Number(plan.amount) : Number(plan.newAmount)
+  let price =
+    plan.action === 'place_buy'
+      ? Number(plan.price)
+      : Number(plan.newPrice)
+
+  let amount =
+    plan.action === 'place_buy'
+      ? Number(plan.amount)
+      : Number(plan.newAmount)
+
+  if (plan.action === 'place_buy') {
+    price = Number(plan.price)
+    amount = Number(plan.amount)
+  } else if (plan.action === 'replace_existing') {
+    price = Number(plan.newPrice)
+    amount = Number(plan.newAmount)
+  }
 
   const orderCost = calculateOrderCost(
-    targetPrice.toFixed(8),
-    targetAmount.toFixed(8)
+    price.toFixed(8),
+    amount.toFixed(8)
   )
 
   const askDistance =
@@ -57,10 +68,10 @@ function logEntryGeometry(
       ? null
       : snapshot.bestAsk - snapshot.lastTradePrice
 
-  const wouldCross = targetPrice >= snapshot.bestAsk
+  const wouldCross = price >= snapshot.bestAsk
 
   console.log('\n--- Entry Geometry ---')
-  console.log(`Target buy price: ${targetPrice.toFixed(8)}`)
+  console.log(`Target buy price: ${price.toFixed(8)}`)
   console.log(`Best ask: ${snapshot.bestAsk.toFixed(8)}`)
   console.log(`Spread: ${snapshot.spread.toFixed(8)}`)
 
@@ -70,7 +81,7 @@ function logEntryGeometry(
     console.log(`Ask distance from last trade: ${askDistance.toFixed(8)}`)
   }
 
-  console.log(`Order amount: ${targetAmount.toFixed(8)} CURE`)
+  console.log(`Order amount: ${amount.toFixed(8)} CURE`)
   console.log(`Order cost: ${orderCost.toFixed(8)} GRC`)
   console.log(`Classification: ${wouldCross ? 'crossing' : 'resting'}`)
 }
@@ -80,9 +91,9 @@ function sleep(ms: number): Promise<void> {
 }
 
 function findOrderById(
-  orders: Array<{ id: number | string }>,
+  orders: MyOrder[],
   orderId: number | string
-) {
+): MyOrder | undefined {
   return orders.find((order) => String(order.id) === String(orderId))
 }
 
@@ -109,8 +120,8 @@ function logPreflight(): void {
   }
 }
 
-function getFilledAmount(order: { amount: string; remaining: string }): number {
-  return Number(order.amount) - Number(order.remaining)
+function getFilledAmount(_order: Pick<MyOrder, 'amount' | 'status'>): number | null {
+  return null
 }
 
 function logLiveTestResult(args: {
@@ -118,7 +129,7 @@ function logLiveTestResult(args: {
   firstSeenAt: number | null
   cancelledAt: number | null
   finalState: string
-  finalObservedOrder: { amount: string; remaining: string; status?: string } | null
+  finalObservedOrder: Pick<MyOrder, 'amount' | 'status'> | null
 }): void {
   const placementLatencyMs =
     args.firstSeenAt === null ? null : args.firstSeenAt - args.placedAt
@@ -126,10 +137,10 @@ function logLiveTestResult(args: {
   const cancelLatencyMs =
     args.cancelledAt === null ? null : Date.now() - args.cancelledAt
 
-  const filledAmount =
-  args.finalObservedOrder === null
-    ? null
-    : getFilledAmount(args.finalObservedOrder)
+    const filledAmount =
+      args.finalObservedOrder === null
+        ? null
+        : getFilledAmount(args.finalObservedOrder)
 
   console.log('\n--- Live Test Result ---')
   console.log(`placement_latency_ms: ${placementLatencyMs ?? 'n/a'}`)
@@ -178,7 +189,7 @@ async function main(): Promise<void> {
 
   console.log('\n--- Reconciliation View ---')
   console.log('Active buy orders:', getActiveBuyOrders(orders))
-  console.log('Open buy orders:', getOpenBuyOrders(orders))
+  console.log('Open buy orders:', getActiveBuyOrders(orders))
   console.log('Partial buy orders:', getPartialBuyOrders(orders))
 
   console.log('\n--- Execution Plan ---')

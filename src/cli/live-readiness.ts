@@ -1,12 +1,12 @@
 import 'dotenv/config'
-import { getOrderBook, getTrades, getWalletStatus } from './api.js'
-import { getBalances, getMyOrders } from './private-api.js'
-import { buildMarketSnapshot } from './market.js'
-import { evaluateSignal } from './signals.js'
-import { PrivateStrategy } from './strategy/private-strategy.js'
-import { getActiveBuyOrders, getPartialBuyOrders } from './reconciliation.js'
-import { runtimeConfig } from './runtime-config.js'
-import { ExchangeUnavailableError } from './errors.js'
+import { getOrderBook, getTrades, getWalletStatus } from '../api.js'
+import { getBalances, getMyOrders } from '../private-api.js'
+import { buildMarketSnapshot } from '../core/market.js'
+import { evaluateSignal } from '../core/signals.js'
+import { PrivateStrategy } from '../strategy/private-strategy.js'
+import { getActiveBuyOrders, getPartialBuyOrders } from '../core/reconciliation.js'
+import { runtimeConfig } from '../config/runtime.js'
+import { ExchangeUnavailableError } from '../errors.js'
 
 type Balances = Awaited<ReturnType<typeof getBalances>>
 

@@ -1,5 +1,5 @@
 import 'dotenv/config'
-import { getBalances, getMyOrders } from './private-api.js'
+import { getBalances, getMyOrders } from '../private-api.js'
 
 async function main(): Promise<void> {
   console.log('Testing private API...\n')

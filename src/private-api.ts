@@ -63,7 +63,7 @@ async function privateRequest<T>(
       'X-API-Signature': signature,
       'Content-Type': 'application/json',
     },
-    body: method === 'POST' ? body : undefined,
+    body: method === 'POST' ? body : null,
   })
 
   if (!response.ok) {

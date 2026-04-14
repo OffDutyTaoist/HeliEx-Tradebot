@@ -1,4 +1,4 @@
-import type { MyOrder } from './private-api.js'
+import type { MyOrder } from '../private-api.js'
 
 export function isActiveOrder(order: MyOrder): boolean {
   return order.status === 'open' || order.status === 'partial'

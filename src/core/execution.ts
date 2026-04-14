@@ -1,6 +1,6 @@
 import type { MarketSnapshot } from './market.js'
 import type { TradeSignal } from './signals.js'
-import type { MyOrder } from './private-api.js'
+import type { MyOrder } from '../private-api.js'
 
 export type ExecutionPlan =
   | {

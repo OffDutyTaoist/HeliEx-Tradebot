@@ -1,7 +1,7 @@
-import type { MarketSnapshot } from '../market.js'
-import type { TradeSignal } from '../signals.js'
+import type { MarketSnapshot } from '../core/market.js'
+import type { TradeSignal } from '../core/signals.js'
 import type { MyOrder } from '../private-api.js'
-import type { ExecutionPlan } from '../execution.js'
+import type { ExecutionPlan } from '../core/execution.js'
 
 export type StrategyContext = {
   snapshot: MarketSnapshot

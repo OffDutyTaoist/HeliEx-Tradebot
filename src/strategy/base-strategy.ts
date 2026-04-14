@@ -1,6 +1,6 @@
-import type { ExecutionPlan } from '../execution.js'
+import type { ExecutionPlan } from '../core/execution.js'
+import { findActiveBuyOrder } from '../core/reconciliation.js'
 import type { StrategyContext, TradingStrategy } from './types.js'
-import { findActiveBuyOrder } from '../reconciliation.js'
 
 const BUY_AMOUNT = 0.1
 const PRICE_TICK = 0.00000001

@@ -16,14 +16,9 @@ logs/
 # Build output
 dist/
 *.js.map
+*.tsbuildinfo
 
 # Accidental root JS files
-/types.js
-
-# accidental generated files
-/types.js
-
-# accidental generated files
 /types.js
 
 # Security 

@@ -5,17 +5,17 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "tsx src/index.ts",
+    "dev": "tsx src/cli/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js",
-    "analyze": "tsx src/analyze-log.ts",
-    "test:private": "tsx src/test-private.ts",
-    "test:trade": "tsx src/test-trade.ts",
-    "test:execution": "tsx src/test-execution.ts",
-    "run:execution": "tsx src/execute-cycle.ts",
-    "test:reconciliation": "tsx src/test-reconciliation.ts",
-    "test:strategy": "tsx src/test-strategy.ts",
-    "live:readiness": "tsx src/live-readiness.ts"
+    "start": "node dist/cli/index.js",
+    "analyze": "tsx src/scripts/analyze-log.ts",
+    "test:private": "tsx src/scripts/test-private.ts",
+    "test:trade": "tsx src/scripts/test-trade.ts",
+    "test:execution": "tsx src/scripts/test-execution.ts",
+    "run:execution": "tsx src/cli/execute-cycle.ts",
+    "test:reconciliation": "tsx src/scripts/test-reconciliation.ts",
+    "test:strategy": "tsx src/scripts/test-strategy.ts",
+    "live:readiness": "tsx src/cli/live-readiness.ts"
   },
   "keywords": [],
   "author": "",
@@ -24,7 +24,7 @@
     "dotenv": "^17.4.1"
   },
   "devDependencies": {
-    "@types/node": "^25.5.2",
+    "@types/node": "^25.6.0",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2"
   }

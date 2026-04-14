@@ -1,4 +1,4 @@
-import type { OrderBook, Trade } from './types.js'
+import type { OrderBook, Trade } from '../types.js'
 
 export type MarketSnapshot = {
   bestBid: number

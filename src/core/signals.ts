@@ -1,6 +1,6 @@
 import type { MarketSnapshot } from './market.js'
-import type { WalletStatus } from './types.js'
-import { runtimeConfig } from './runtime-config.js'
+import type { WalletStatus } from '../types.js'
+import { runtimeConfig } from '../config/runtime.js'
 
 export type MarketState =
   | 'candidate'

@@ -1,9 +1,9 @@
 import 'dotenv/config'
-import { getOrderBook, getTrades, getWalletStatus } from './api.js'
-import { buildMarketSnapshot, type MarketSnapshot } from './market.js'
-import type { WalletStatus } from './types.js'
-import { evaluateSignal } from './signals.js'
-import { appendJsonLine } from './logger.js'
+import { getOrderBook, getTrades, getWalletStatus } from '../api.js'
+import { buildMarketSnapshot, type MarketSnapshot } from '../core/market.js'
+import type { WalletStatus } from '../types.js'
+import { evaluateSignal } from '../core/signals.js'
+import { appendJsonLine } from '../logger.js'
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))

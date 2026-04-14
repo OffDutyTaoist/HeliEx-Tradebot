@@ -1,8 +1,8 @@
-import { PrivateStrategy } from './strategy/private-strategy.js'
-import type { StrategyContext } from './strategy/types.js'
-import type { MarketSnapshot } from './market.js'
-import type { TradeSignal } from './signals.js'
-import type { MyOrder } from './private-api.js'
+import { PrivateStrategy } from '../strategy/private-strategy.js'
+import type { StrategyContext } from '../strategy/types.js'
+import type { MarketSnapshot } from '../core/market.js'
+import type { TradeSignal } from '../core/signals.js'
+import type { MyOrder } from '../private-api.js'
 
 function printSection(title: string, value: unknown) {
   console.log(`\n--- ${title} ---`)
@@ -41,7 +41,6 @@ function makeBuyOrder(
     side: 'buy',
     price: '0.50000001',
     amount: '0.10000000',
-    remaining: '0.10000000',
     status: 'open',
     created_at: '2026-04-10T10:00:00.000000',
     ...overrides,

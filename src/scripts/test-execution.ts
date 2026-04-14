@@ -1,9 +1,9 @@
 import 'dotenv/config'
-import { getOrderBook, getTrades, getWalletStatus } from './api.js'
-import { getMyOrders } from './private-api.js'
-import { buildMarketSnapshot } from './market.js'
-import { evaluateSignal } from './signals.js'
-import { buildExecutionPlan } from './execution.js'
+import { getOrderBook, getTrades, getWalletStatus } from '../api.js'
+import { getMyOrders } from '../private-api.js'
+import { buildMarketSnapshot } from '../core/market.js'
+import { evaluateSignal } from '../core/signals.js'
+import { buildExecutionPlan } from '../core/execution.js'
 
 async function main(): Promise<void> {
   console.log('Testing dry-run execution...\n')
