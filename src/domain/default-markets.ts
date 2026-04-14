@@ -7,4 +7,5 @@ export const DEFAULT_TRACKED_MARKETS = [
   makeMarket(ASSETS.GRC, ASSETS.BTC),
   makeMarket(ASSETS.GRC, ASSETS.USDT),
   makeMarket(ASSETS.CURE, ASSETS.BTC),
+  makeMarket(ASSETS.CURE, ASSETS.GRC),
 ]

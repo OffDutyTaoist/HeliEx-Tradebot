@@ -8,13 +8,15 @@ import { scanMarkets, classifyStatus } from '../services/market-scanner.js'
 import { buildMarketGraph } from '../core/market-graph.js'
 import { discoverRoutes, summarizeRoute } from '../services/route-discovery.js'
 import { priceRoute } from '../core/market-graph.js'
+import { HeliExAdapter } from '../venues/heliex/adapter.js'
 
 async function main(): Promise<void> {
   const venues = [
-    new SafeTradeAdapter(),
+    new HeliExAdapter(),
+    //new SafeTradeAdapter(),
     new AltQuickAdapter(),
     new CoinbaseAdapter(),
-    new RobinhoodAdapter(),
+    //new RobinhoodAdapter(),
   ]
 
   const { scanned, tickers, errors } = await scanMarkets(venues, DEFAULT_TRACKED_MARKETS)
