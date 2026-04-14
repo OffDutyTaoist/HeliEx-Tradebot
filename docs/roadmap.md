@@ -16,6 +16,17 @@ Supported venue roles
   • AltQuick: CURE market data venue
   • HeliEx: optional direct GRC/CURE execution venue
 
+First implementation target
+  • define canonical assets and markets
+  • add read-only venue adapter contract
+  • add market scanner service
+  • implement SafeTrade public market data adapter first
+  • implement AltQuick public market data adapter second
+
+Venue credential status
+  • SafeTrade keys loaded, public market data path blocked by Cloudflare
+  • AltQuick keys loaded, public API endpoint unresolved
+
 Phase 1: private read access
 
 Status: complete enough
