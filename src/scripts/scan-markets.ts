@@ -1,22 +1,18 @@
 import 'dotenv/config'
 import { AltQuickAdapter } from '../venues/altquick/adapter.js'
 import { CoinbaseAdapter } from '../venues/coinbase/adapter.js'
-import { RobinhoodAdapter } from '../venues/robinhood/adapter.js'
-import { SafeTradeAdapter } from '../venues/safetrade/adapter.js'
 import { DEFAULT_TRACKED_MARKETS } from '../domain/default-markets.js'
 import { scanMarkets, classifyStatus } from '../services/market-scanner.js'
 import { buildMarketGraph } from '../core/market-graph.js'
 import { discoverRoutes, summarizeRoute } from '../services/route-discovery.js'
-import { priceRoute } from '../core/market-graph.js'
 import { HeliExAdapter } from '../venues/heliex/adapter.js'
+import { selectBestRoute } from '../services/route-ranking.js'
 
 async function main(): Promise<void> {
   const venues = [
     new HeliExAdapter(),
-    //new SafeTradeAdapter(),
     new AltQuickAdapter(),
     new CoinbaseAdapter(),
-    //new RobinhoodAdapter(),
   ]
 
   const { scanned, tickers, errors } = await scanMarkets(venues, DEFAULT_TRACKED_MARKETS)
@@ -82,22 +78,25 @@ async function main(): Promise<void> {
       includeUnresolved: false,
     })
 
-    if (routes.length === 0) {
+    const best = selectBestRoute(routes)
+
+    if (!best) {
       console.log({ from, to, routes: [] })
       continue
     }
 
-    for (const route of routes) {
-      console.log({
-        from,
-        to,
-        route: summarizeRoute(route),
-        hops: route.edges.length,
-        impliedRate: priceRoute(route),
-        venues: route.edges.map((edge) => edge.venue),
-        markets: route.edges.map((edge) => edge.market.symbol),
-      })
-    }
+    console.log({
+      from,
+      to,
+      bestRoute: summarizeRoute(best.route),
+      impliedRate: best.impliedRate,
+      score: best.score,
+      hops: best.hopCount,
+      staleSeconds: best.staleSeconds,
+      degradedEdges: best.degradedEdges,
+      venues: best.route.edges.map((edge) => edge.venue),
+      markets: best.route.edges.map((edge) => edge.market.symbol),
+    })
   }
 
   if (errors.length > 0) {
