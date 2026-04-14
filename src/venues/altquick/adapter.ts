@@ -7,95 +7,20 @@ import type {
   VenueName,
   VenueOrderBook,
 } from '../types.js'
-import {
-  listAltQuickMarkets,
-  toAltQuickSymbol,
-} from './symbols.js'
 
-interface AltQuickTickerResponse {
-  bid?: string | number
-  ask?: string | number
-  last?: string | number
-  updated_at?: string | number
-  timestamp?: string | number
-}
+const ALTQUICK_MARKETS: CanonicalMarket[] = [
+  {
+    base: 'CURE',
+    quote: 'BTC',
+    symbol: 'CURE/BTC',
+  },
+]
 
-interface AltQuickOrderBookLevel {
-  price?: string | number
-  amount?: string | number
-}
-
-interface AltQuickOrderBookResponse {
-  bids?: Array<[string | number, string | number]> | AltQuickOrderBookLevel[]
-  asks?: Array<[string | number, string | number]> | AltQuickOrderBookLevel[]
-}
-
-function toNumber(value: unknown): number | null {
-  if (typeof value === 'number') return Number.isFinite(value) ? value : null
-  if (typeof value === 'string') {
-    const parsed = Number(value)
-    return Number.isFinite(parsed) ? parsed : null
+function assertSupportedMarket(market: CanonicalMarket): void {
+  const supported = ALTQUICK_MARKETS.some((m) => m.symbol === market.symbol)
+  if (!supported) {
+    throw new Error(`AltQuick does not support ${market.symbol}`)
   }
-  return null
-}
-
-function normalizeTimestamp(value: unknown): string {
-  if (typeof value === 'string' && value.trim() !== '') {
-    const date = new Date(value)
-    if (!Number.isNaN(date.getTime())) return date.toISOString()
-  }
-
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    const ms = value > 10_000_000_000 ? value : value * 1000
-    return new Date(ms).toISOString()
-  }
-
-  return new Date().toISOString()
-}
-
-function parseOrderBookSide(
-  levels: Array<[string | number, string | number]> | AltQuickOrderBookLevel[] | undefined,
-) {
-  if (!levels) return []
-
-  return levels
-    .map((level) => {
-      if (Array.isArray(level)) {
-        const [priceRaw, amountRaw] = level
-        const price = toNumber(priceRaw)
-        const amount = toNumber(amountRaw)
-        if (price === null || amount === null) return null
-        return { price, amount }
-      }
-
-      const price = toNumber(level.price)
-      const amount = toNumber(level.amount)
-      if (price === null || amount === null) return null
-      return { price, amount }
-    })
-    .filter((level): level is { price: number; amount: number } => level !== null)
-}
-
-function classifyAltQuickHttpError(status: number, body: string): string {
-  const lowerBody = body.toLowerCase()
-
-  if (
-    status === 403 &&
-    (
-      lowerBody.includes('cloudflare') ||
-      lowerBody.includes('attention required') ||
-      lowerBody.includes('please enable cookies') ||
-      lowerBody.includes('sorry, you have been blocked')
-    )
-  ) {
-    return 'AltQuick blocked by Cloudflare'
-  }
-
-  if (status === 404) {
-    return 'AltQuick endpoint not found'
-  }
-
-  return `AltQuick request failed with status ${status}`
 }
 
 export class AltQuickAdapter implements TradingVenue {
@@ -103,82 +28,109 @@ export class AltQuickAdapter implements TradingVenue {
   readonly capabilities: VenueCapability[] = ['public_market_data']
 
   constructor(
-    private readonly baseUrl = process.env.ALTQUICK_BASE_URL ?? 'https://altquick.com/api/v2',
+    private readonly baseUrl =
+      process.env.ALTQUICK_BASE_URL ?? 'https://altquick.com/swap/api/v1',
   ) {}
 
   async ping(): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/markets`, {
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': 'HeliEx-Tradebot/1.0 (+local development)',
-      },
-    })
+    const response = await fetch(`${this.baseUrl}/markets`)
 
     if (!response.ok) {
-      const body = await response.text()
-      const reason = classifyAltQuickHttpError(response.status, body)
-      throw new Error(reason)
+      throw new Error(`AltQuick ping failed with status ${response.status}`)
     }
   }
 
   async getMarkets(): Promise<VenueMarketInfo[]> {
-    return listAltQuickMarkets().map((market) => ({
+    return ALTQUICK_MARKETS.map((market) => ({
       venue: this.name,
       market,
-      nativeSymbol: toAltQuickSymbol(market),
+      nativeSymbol: market.symbol.replace('/', '-'),
       enabled: true,
     }))
   }
 
-  async getTicker(market: CanonicalMarket): Promise<MarketTicker> {
-    const nativeSymbol = toAltQuickSymbol(market)
-    const response = await fetch(`${this.baseUrl}/ticker/${nativeSymbol}`, {
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': 'HeliEx-Tradebot/1.0 (+local development)',
-      },
-    })
+async getTicker(market: CanonicalMarket): Promise<MarketTicker> {
+  assertSupportedMarket(market)
 
-    if (!response.ok) {
-      const body = await response.text()
-      const reason = classifyAltQuickHttpError(response.status, body)
-      throw new Error(`${reason} for ${market.symbol}`)
-    }
+  const nativeSymbol = market.symbol.replace('/', '-')
+  const response = await fetch(`${this.baseUrl}/market/${nativeSymbol}`, {
+    headers: {
+      Accept: 'application/json',
+      'User-Agent': 'HeliEx-Tradebot/1.0 (+local development)',
+    },
+  })
 
-    const data = (await response.json()) as AltQuickTickerResponse
-
-    return {
-      venue: this.name,
-      market,
-      bid: toNumber(data.bid),
-      ask: toNumber(data.ask),
-      last: toNumber(data.last),
-      timestamp: normalizeTimestamp(data.updated_at ?? data.timestamp),
-    }
+  if (!response.ok) {
+    const body = await response.text()
+    throw new Error(`AltQuick ticker failed for ${market.symbol} with status ${response.status}: ${body}`)
   }
 
-  async getOrderBook(market: CanonicalMarket): Promise<VenueOrderBook> {
-    const nativeSymbol = toAltQuickSymbol(market)
-    const response = await fetch(`${this.baseUrl}/order_book?market=${nativeSymbol}`, {
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': 'HeliEx-Tradebot/1.0 (+local development)',
-      },
-    })
+  interface AltQuickMarketSide {
+    coin?: string
+    avgrate?: string
+    amount?: string
+    lowestrate?: string
+    firstrate?: string
+    btctotal?: string
+  }
 
-    if (!response.ok) {
-      const body = await response.text()
-      const reason = classifyAltQuickHttpError(response.status, body)
-      throw new Error(`${reason} for ${market.symbol}`)
+  interface AltQuickMarketResponse {
+    rates?: {
+      from?: AltQuickMarketSide
+      to?: AltQuickMarketSide
+      min?: string
+      max?: string
     }
+    ratesWithFees?: {
+      from?: AltQuickMarketSide
+      to?: AltQuickMarketSide
+      fees?: {
+        exchangeCommission?: string
+        total?: string
+        commission?: string
+      }
+    }
+    min?: string
+    max?: string
+    closed?: boolean
+  }
 
-    const data = (await response.json()) as AltQuickOrderBookResponse
+  const data = (await response.json()) as AltQuickMarketResponse
+
+  if (data.closed) {
+    throw new Error(`AltQuick market is closed for ${market.symbol}`)
+  }
+
+  const avgRate = Number(data.rates?.from?.avgrate)
+  const firstRate = Number(data.rates?.from?.firstrate)
+  const lowRate = Number(data.rates?.from?.lowestrate)
+
+  const bid = Number.isFinite(lowRate) ? lowRate : Number.isFinite(avgRate) ? avgRate : null
+  const ask = Number.isFinite(firstRate) ? firstRate : Number.isFinite(avgRate) ? avgRate : null
+  const last = Number.isFinite(avgRate) ? avgRate : null
+
+  if (bid === null && ask === null && last === null) {
+    throw new Error(`AltQuick returned invalid market rates for ${market.symbol}`)
+  }
+
+  return {
+    venue: this.name,
+    market,
+    bid,
+    ask,
+    last,
+    timestamp: new Date().toISOString(),
+  }
+}
+
+  async getOrderBook(market: CanonicalMarket): Promise<VenueOrderBook> {
+    assertSupportedMarket(market)
 
     return {
       venue: this.name,
       market,
-      bids: parseOrderBookSide(data.bids),
-      asks: parseOrderBookSide(data.asks),
+      bids: [],
+      asks: [],
       timestamp: new Date().toISOString(),
     }
   }

@@ -2,11 +2,11 @@ import { ASSETS } from '../../domain/assets.js'
 import type { CanonicalMarket } from '../../domain/markets.js'
 
 const CANONICAL_TO_ALTQUICK: Record<string, string> = {
-  'CURE/BTC': 'CURE_BTC',
+  'CURE/BTC': 'CURE-BTC',
 }
 
 const ALTQUICK_TO_CANONICAL: Record<string, CanonicalMarket> = {
-  CURE_BTC: {
+  'CURE-BTC': {
     base: ASSETS.CURE,
     quote: ASSETS.BTC,
     symbol: 'CURE/BTC',

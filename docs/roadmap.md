@@ -1,40 +1,22 @@
 ﻿Phase 0.5: venue adapter and market graph foundation
-
-Phase 0.5: venue adapter and market graph foundation
-
 Status: active
-  • canonical asset model ✅
-  • canonical market model ✅
-  • venue adapter interface ✅
-  • public market data integration ✅
-  • symbol normalization ✅
-  • degraded venue handling ✅
-  • market graph builder ⏳
-  • route candidate discovery ⏳
+    • canonical asset model ✅ 
+    • canonical market model ✅ 
+    • venue adapter interface ✅ 
+    • public market data integration ⚠️ partial 
+    • symbol normalization ✅ 
+    • degraded venue handling ✅ 
+    • market graph builder ✅ 
+    • route candidate discovery ✅ 
+    • route validation with target assets ⏳ 
+    • GRC/CURE venue coverage ⏳ 
 
 Current venue state
-  • Coinbase: working
-  • Robinhood: authenticated headers required
-  • SafeTrade: Cloudflare-blocked
-  • AltQuick: endpoint unresolved
-
-Supported venue roles
-  • Robinhood: reference / major market venue
-  • Coinbase: reference / major market venue
-  • SafeTrade: GRC execution + market data venue
-  • AltQuick: CURE market data venue
-  • HeliEx: optional direct GRC/CURE execution venue
-
-First implementation target
-  • define canonical assets and markets
-  • add read-only venue adapter contract
-  • add market scanner service
-  • implement SafeTrade public market data adapter first
-  • implement AltQuick public market data adapter second
-
-Venue credential status
-  • SafeTrade keys loaded, public market data path blocked by Cloudflare
-  • AltQuick keys loaded, public API endpoint unresolved
+    • Coinbase: working 
+    • Robinhood: deferred 
+    • SafeTrade: blocked 
+    • AltQuick: unresolved 
+    • BTCPOP: investigate as replacement data venue
 
 Phase 1: private read access
 
