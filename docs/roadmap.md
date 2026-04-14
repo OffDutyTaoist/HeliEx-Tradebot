@@ -1,13 +1,22 @@
 ﻿Phase 0.5: venue adapter and market graph foundation
 
-Status: now
-  • canonical asset model
-  • canonical market model
-  • venue adapter interface
-  • public market data integration
-  • symbol normalization
-  • market graph builder
-  • route candidate discovery
+Phase 0.5: venue adapter and market graph foundation
+
+Status: active
+  • canonical asset model ✅
+  • canonical market model ✅
+  • venue adapter interface ✅
+  • public market data integration ✅
+  • symbol normalization ✅
+  • degraded venue handling ✅
+  • market graph builder ⏳
+  • route candidate discovery ⏳
+
+Current venue state
+  • Coinbase: working
+  • Robinhood: authenticated headers required
+  • SafeTrade: Cloudflare-blocked
+  • AltQuick: endpoint unresolved
 
 Supported venue roles
   • Robinhood: reference / major market venue
