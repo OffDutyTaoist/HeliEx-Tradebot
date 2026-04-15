@@ -18,6 +18,8 @@ export interface MarketEdge {
   priceSide: 'bid' | 'ask'
   timestamp: string
   status: VenueStatus
+  minAmount?: number | null
+  maxAmount?: number | null
 }
 
 export interface MarketGraph {
@@ -61,6 +63,8 @@ export function buildMarketGraph(scanned: ScannedTicker[]): MarketGraph {
         priceSide: 'bid',
         timestamp: ticker.timestamp,
         status,
+        minAmount: ticker.minAmount ?? null,
+        maxAmount: ticker.maxAmount ?? null,
       }
 
       edges.push(edge)
@@ -78,6 +82,8 @@ export function buildMarketGraph(scanned: ScannedTicker[]): MarketGraph {
         priceSide: 'ask',
         timestamp: ticker.timestamp,
         status,
+        minAmount: ticker.minAmount ?? null,
+        maxAmount: ticker.maxAmount ?? null,
       }
 
       edges.push(edge)

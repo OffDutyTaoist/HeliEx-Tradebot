@@ -55,15 +55,36 @@ function validateRouteAmount(
   amountWarnings: string[]
 } {
   const warnings: string[] = []
+  let amount = startAmount
 
   for (const edge of route.edges) {
     if (edge.venue === 'altquick') {
-      // Placeholder for future AltQuick min/max validation
-      // when min/max is threaded into adapter metadata.
-      if (startAmount <= 0) {
-        warnings.push(`Invalid start amount ${startAmount} for AltQuick route`)
+      if (amount <= 0) {
+        warnings.push(`Invalid amount ${amount} reaching AltQuick`)
+      }
+
+      if (edge.minAmount != null && amount < edge.minAmount) {
+        warnings.push(
+          `Amount ${amount} is below AltQuick minimum ${edge.minAmount} on ${edge.market.symbol}`
+        )
+      }
+
+      if (edge.maxAmount != null && amount > edge.maxAmount) {
+        warnings.push(
+          `Amount ${amount} exceeds AltQuick maximum ${edge.maxAmount} on ${edge.market.symbol}`
+        )
       }
     }
+
+    const fee = VENUE_FEES[edge.venue] ?? 0
+
+    if (edge.action === 'sell_base') {
+      amount *= edge.price
+    } else {
+      amount /= edge.price
+    }
+
+    amount *= (1 - fee)
   }
 
   return {

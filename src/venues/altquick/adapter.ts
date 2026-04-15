@@ -109,6 +109,9 @@ async getTicker(market: CanonicalMarket): Promise<MarketTicker> {
   const ask = Number.isFinite(firstRate) ? firstRate : Number.isFinite(avgRate) ? avgRate : null
   const last = Number.isFinite(avgRate) ? avgRate : null
 
+  const minAmount = Number(data.min)
+  const maxAmount = Number(data.max)
+
   if (bid === null && ask === null && last === null) {
     throw new Error(`AltQuick returned invalid market rates for ${market.symbol}`)
   }
@@ -120,6 +123,8 @@ async getTicker(market: CanonicalMarket): Promise<MarketTicker> {
     ask,
     last,
     timestamp: new Date().toISOString(),
+    minAmount: Number.isFinite(minAmount) ? minAmount : null,
+    maxAmount: Number.isFinite(maxAmount) ? maxAmount : null,
   }
 }
 

@@ -78,7 +78,12 @@ async function main(): Promise<void> {
       includeUnresolved: false,
     })
 
-    const startAmount = 1
+    const START_AMOUNTS: Record<string, number> = {
+      GRC: 5000,
+      CURE: 3000,
+    }
+
+    const startAmount = START_AMOUNTS[from] ?? 1
     const best = selectBestRoute(routes, startAmount)
 
     if (!best) {

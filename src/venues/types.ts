@@ -24,6 +24,8 @@ export interface MarketTicker {
   ask: number | null
   last: number | null
   timestamp: string
+  minAmount?: number | null
+  maxAmount?: number | null
 }
 
 export interface VenueOrderBook {
