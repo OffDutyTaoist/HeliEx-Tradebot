@@ -95,18 +95,41 @@ async function main(): Promise<void> {
     }
 
     const amounts = startAmountsForAsset(from)
+    const results: Array<{
+      startAmount: number
+      bestRoute: string
+      impliedRate: number
+      score: number
+      hops: number
+      staleSeconds: number
+      degradedEdges: number
+      isAmountValid: boolean
+      amountWarnings: string[]
+      venues: string[]
+      markets: string[]
+    }> = []
 
     for (const startAmount of amounts) {
       const best = selectBestRoute(routes, startAmount)
 
       if (!best) {
-        console.log({ from, to, startAmount, routes: [] })
+        results.push({
+          startAmount,
+          bestRoute: 'none',
+          impliedRate: 0,
+          score: Number.NEGATIVE_INFINITY,
+          hops: 0,
+          staleSeconds: 0,
+          degradedEdges: 0,
+          isAmountValid: false,
+          amountWarnings: ['No valid route found'],
+          venues: [],
+          markets: [],
+        })
         continue
       }
 
-      console.log({
-        from,
-        to,
+      results.push({
         startAmount,
         bestRoute: summarizeRoute(best.route),
         impliedRate: best.impliedRate,
@@ -120,12 +143,42 @@ async function main(): Promise<void> {
         markets: best.route.edges.map((edge) => edge.market.symbol),
       })
     }
-  }
 
-  if (errors.length > 0) {
-    console.log('\n--- Scanner Errors ---')
-    for (const error of errors) {
-      console.log(error)
+    const validResults = results.filter((result) => result.isAmountValid)
+    const firstValid = validResults.at(0) ?? null
+    const lastValid = validResults.at(-1) ?? null
+
+    const firstValidAmount = firstValid?.startAmount ?? null
+    const lastValidAmount = lastValid?.startAmount ?? null
+
+    console.log({
+      from,
+      to,
+      testedAmounts: results.map((result) => result.startAmount),
+      validAmounts: validResults.map((result) => result.startAmount),
+      firstValidAmount,
+      lastValidAmount,
+      bestRoute: results[0]?.bestRoute ?? 'none',
+      venues: results[0]?.venues ?? [],
+      markets: results[0]?.markets ?? [],
+    })
+
+    for (const result of results) {
+      console.log({
+        from,
+        to,
+        startAmount: result.startAmount,
+        bestRoute: result.bestRoute,
+        impliedRate: result.impliedRate,
+        score: result.score,
+        hops: result.hops,
+        staleSeconds: result.staleSeconds,
+        degradedEdges: result.degradedEdges,
+        isAmountValid: result.isAmountValid,
+        amountWarnings: result.amountWarnings,
+        venues: result.venues,
+        markets: result.markets,
+      })
     }
   }
 }
