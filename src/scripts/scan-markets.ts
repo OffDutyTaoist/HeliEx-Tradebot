@@ -78,7 +78,8 @@ async function main(): Promise<void> {
       includeUnresolved: false,
     })
 
-    const best = selectBestRoute(routes)
+    const startAmount = 1
+    const best = selectBestRoute(routes, startAmount)
 
     if (!best) {
       console.log({ from, to, routes: [] })
@@ -88,12 +89,15 @@ async function main(): Promise<void> {
     console.log({
       from,
       to,
+      startAmount,
       bestRoute: summarizeRoute(best.route),
       impliedRate: best.impliedRate,
       score: best.score,
       hops: best.hopCount,
       staleSeconds: best.staleSeconds,
       degradedEdges: best.degradedEdges,
+      isAmountValid: best.isAmountValid,
+      amountWarnings: best.amountWarnings,
       venues: best.route.edges.map((edge) => edge.venue),
       markets: best.route.edges.map((edge) => edge.market.symbol),
     })
