@@ -8,6 +8,15 @@ import { discoverRoutes, summarizeRoute } from '../services/route-discovery.js'
 import { HeliExAdapter } from '../venues/heliex/adapter.js'
 import { selectBestRoute } from '../services/route-ranking.js'
 
+const START_AMOUNTS: Record<string, number[]> = {
+  GRC: [1, 1000, 5000, 10000],
+  CURE: [1, 1000, 3000, 10000],
+}
+
+function startAmountsForAsset(asset: string): number[] {
+  return START_AMOUNTS[asset] ?? [1]
+}
+
 async function main(): Promise<void> {
   const venues = [
     new HeliExAdapter(),
@@ -26,6 +35,8 @@ async function main(): Promise<void> {
       ask: ticker.ask,
       last: ticker.last,
       timestamp: ticker.timestamp,
+      minAmount: ticker.minAmount ?? null,
+      maxAmount: ticker.maxAmount ?? null,
     })
   }
 
@@ -78,34 +89,37 @@ async function main(): Promise<void> {
       includeUnresolved: false,
     })
 
-    const START_AMOUNTS: Record<string, number> = {
-      GRC: 5000,
-      CURE: 3000,
-    }
-
-    const startAmount = START_AMOUNTS[from] ?? 1
-    const best = selectBestRoute(routes, startAmount)
-
-    if (!best) {
+    if (routes.length === 0) {
       console.log({ from, to, routes: [] })
       continue
     }
 
-    console.log({
-      from,
-      to,
-      startAmount,
-      bestRoute: summarizeRoute(best.route),
-      impliedRate: best.impliedRate,
-      score: best.score,
-      hops: best.hopCount,
-      staleSeconds: best.staleSeconds,
-      degradedEdges: best.degradedEdges,
-      isAmountValid: best.isAmountValid,
-      amountWarnings: best.amountWarnings,
-      venues: best.route.edges.map((edge) => edge.venue),
-      markets: best.route.edges.map((edge) => edge.market.symbol),
-    })
+    const amounts = startAmountsForAsset(from)
+
+    for (const startAmount of amounts) {
+      const best = selectBestRoute(routes, startAmount)
+
+      if (!best) {
+        console.log({ from, to, startAmount, routes: [] })
+        continue
+      }
+
+      console.log({
+        from,
+        to,
+        startAmount,
+        bestRoute: summarizeRoute(best.route),
+        impliedRate: best.impliedRate,
+        score: best.score,
+        hops: best.hopCount,
+        staleSeconds: best.staleSeconds,
+        degradedEdges: best.degradedEdges,
+        isAmountValid: best.isAmountValid,
+        amountWarnings: best.amountWarnings,
+        venues: best.route.edges.map((edge) => edge.venue),
+        markets: best.route.edges.map((edge) => edge.market.symbol),
+      })
+    }
   }
 
   if (errors.length > 0) {
