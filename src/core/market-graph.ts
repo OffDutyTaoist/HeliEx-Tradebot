@@ -20,6 +20,7 @@ export interface MarketEdge {
   status: VenueStatus
   minAmount?: number | null
   maxAmount?: number | null
+  availableAmount?: number | null
 }
 
 export interface MarketGraph {
@@ -65,6 +66,7 @@ export function buildMarketGraph(scanned: ScannedTicker[]): MarketGraph {
         status,
         minAmount: ticker.minAmount ?? null,
         maxAmount: ticker.maxAmount ?? null,
+        availableAmount: ticker.bestBidAmount ?? null,
       }
 
       edges.push(edge)
@@ -84,6 +86,7 @@ export function buildMarketGraph(scanned: ScannedTicker[]): MarketGraph {
         status,
         minAmount: ticker.minAmount ?? null,
         maxAmount: ticker.maxAmount ?? null,
+        availableAmount: ticker.bestAskAmount ?? null,
       }
 
       edges.push(edge)

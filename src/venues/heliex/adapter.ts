@@ -155,20 +155,28 @@ export class HeliExAdapter implements TradingVenue {
     const bids = parseOrderLevels(orderBookData.bids)
     const asks = parseOrderLevels(orderBookData.asks)
 
-    const bestBid = bids.length > 0 ? Math.max(...bids.map((x) => x.price)) : null
-    const bestAsk = asks.length > 0 ? Math.min(...asks.map((x) => x.price)) : null
+    const bestBidLevel = bids.length > 0
+      ? bids.reduce((best, level) => (level.price > best.price ? level : best))
+      : null
 
-    const mostRecentTrade = Array.isArray(tradesData) && tradesData.length > 0
+    const bestAskLevel = asks.length > 0
+      ? asks.reduce((best, level) => (level.price < best.price ? level : best))
+      : null
+
+    const mostRecentTrade = 
+      Array.isArray(tradesData) && tradesData.length > 0
       ? tradesData[0]
       : undefined
 
     return {
       venue: this.name,
       market,
-      bid: bestBid,
-      ask: bestAsk,
       last: toNumber(mostRecentTrade?.price),
       timestamp: normalizeTimestamp(mostRecentTrade?.created_at),
+      bid: bestBidLevel?.price ?? null,
+      ask: bestAskLevel?.price ?? null,
+      bestBidAmount: bestBidLevel?.amount ?? null,
+      bestAskAmount: bestAskLevel?.amount ?? null,
     }
   }
 

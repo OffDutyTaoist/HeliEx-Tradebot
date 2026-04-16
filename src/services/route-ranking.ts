@@ -76,6 +76,14 @@ function validateRouteAmount(
       }
     }
 
+    if (edge.venue === 'heliex') {
+      if (edge.availableAmount != null && amount > edge.availableAmount) {
+        warnings.push(
+          `Amount ${amount} exceeds visible HeliEx top-of-book liquidity ${edge.availableAmount} on ${edge.market.symbol}`
+        )
+      }
+    }
+
     const fee = VENUE_FEES[edge.venue] ?? 0
 
     if (edge.action === 'sell_base') {

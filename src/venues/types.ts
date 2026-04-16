@@ -6,6 +6,7 @@ export type VenueName =
   | 'altquick'
   | 'coinbase'
   | 'robinhood'
+  | 'freiexchange'
 
 export type VenueCapability =
   | 'public_market_data'
@@ -26,6 +27,8 @@ export interface MarketTicker {
   timestamp: string
   minAmount?: number | null
   maxAmount?: number | null
+  bestBidAmount?: number | null
+  bestAskAmount?: number | null
 }
 
 export interface VenueOrderBook {

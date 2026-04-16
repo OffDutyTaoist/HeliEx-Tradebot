@@ -7,6 +7,7 @@ import { buildMarketGraph } from '../core/market-graph.js'
 import { discoverRoutes, summarizeRoute } from '../services/route-discovery.js'
 import { HeliExAdapter } from '../venues/heliex/adapter.js'
 import { selectBestRoute } from '../services/route-ranking.js'
+import { FreiExchangeAdapter } from '../venues/freiexchange/adapter.js'
 
 const START_AMOUNTS: Record<string, number[]> = {
   GRC: [1, 1000, 5000, 10000],
@@ -21,6 +22,7 @@ async function main(): Promise<void> {
   const venues = [
     new HeliExAdapter(),
     new AltQuickAdapter(),
+    new FreiExchangeAdapter(),
     new CoinbaseAdapter(),
   ]
 

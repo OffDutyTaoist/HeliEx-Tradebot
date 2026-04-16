@@ -1,29 +1,42 @@
 ﻿Phase 0.5: venue adapter and market graph foundation
 Status: active
-    • canonical asset model ✅ 
-    • canonical market model ✅ 
-    • venue adapter interface ✅ 
-    • public market data integration ⚠️ partial 
-    • symbol normalization ✅ 
-    • degraded venue handling ✅ 
-    • market graph builder ✅ 
-    • route candidate discovery ✅ 
-    • route validation with target assets ⏳ 
-    • GRC/CURE venue coverage ⏳ 
+    • canonical asset model 
+    • canonical market model 
+    • venue adapter interface 
+    • public market data integration
+    • symbol normalization 
+    • degraded venue handling 
+    • market graph builder 
+    • route candidate discovery 
+    • route validation with target assets
+    • GRC/CURE venue coverage
 
 Current venue state
+    • HeliEx: unstable
     • Coinbase: working 
-    • Robinhood: deferred 
-    • SafeTrade: blocked 
-    • AltQuick: unresolved 
+    • Robinhood: deferred API Issues
+    • SafeTrade: blocked Cloudflare Issues
+    • AltQuick: working
     • BTCPOP: investigate as replacement data venue
+
+Phase 0.6
+    • FreiExchange public adapter
+    • FreiExchange ticker + order book integration
+    • expanded route graph and comparison
+    • HeliEx liquidity validation proof when venue is healthy
+    • slippage-aware simulation for order-book venues
+
+Deferred
+    • SafeTrade anti-bot workaround 
+    • Robinhood auth integration 
+    • BTCPOP private/public integration when access is granted
 
 Phase 1: private read access
 
 Status: complete enough
-  • balances ✅
-  • orders ✅
-  • auth/signing ✅
+  • balances
+  • orders
+  • auth/signing
 
 Optional later
   • own trade history endpoint
@@ -34,33 +47,33 @@ Optional later
 Phase 2: smallest possible write action
 
 Status: complete
-  • tiny limit order placed ✅
-  • visible in exchange state ✅
-  • cancelled cleanly ✅
-  • terminal state confirmed ✅
+  • tiny limit order placed
+  • visible in exchange state
+  • cancelled cleanly
+  • terminal state confirmed
 
 Phase 3: reconciliation and safety
 
 Status: strong
-  • dry-run execution ✅
-  • strategy split ✅
-  • private veto layer ✅
-  • reconciliation helpers ✅
-  • reconciliation harness ✅
-  • strategy harness ✅
-  • spend cap ✅
-  • stale trade rejection ✅
-  • partial fill protection ✅
-  • preflight output ✅
-  • shared runtime config ✅
-  • triple live latch ✅
+  • dry-run execution
+  • strategy split
+  • private veto layer
+  • reconciliation helpers
+  • reconciliation harness
+  • strategy harness
+  • spend cap
+  • stale trade rejection
+  • partial fill protection
+  • preflight output
+  • shared runtime config
+  • triple live latch
 
 Phase 3.5: degraded-mode / outage handling
 
 Status: complete first pass
-  • normalize Cloudflare tunnel failures ✅
-  • concise outage handling in execution ✅
-  • concise outage handling in readiness ✅
+  • normalize Cloudflare tunnel failures
+  • concise outage handling in execution
+  • concise outage handling in readiness
 
 Expand with
   • rate-limit normalization
@@ -96,8 +109,8 @@ Status: immediately after first live test
 Phase 5: private strategy hardening
 
 Status: started
-  • private strategy module exists ✅
-  • score veto exists ✅
+  • private strategy module exists
+  • score veto exists
 
 5A venue-local strategy
   • classify local market regimes
