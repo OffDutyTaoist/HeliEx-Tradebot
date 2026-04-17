@@ -18,6 +18,33 @@ function startAmountsForAsset(asset: string): number[] {
   return START_AMOUNTS[asset] ?? [1]
 }
 
+function formatEdgeAnnotations(edge: {
+  status: 'ok' | 'degraded' | 'unresolved'
+  minAmount?: number | null
+  maxAmount?: number | null
+  availableAmount?: number | null
+}): string {
+  const annotations: string[] = []
+
+  if (edge.status !== 'ok') {
+    annotations.push(edge.status)
+  }
+
+  if (edge.minAmount != null) {
+    annotations.push(`min=${edge.minAmount}`)
+  }
+
+  if (edge.maxAmount != null) {
+    annotations.push(`max=${edge.maxAmount}`)
+  }
+
+  if (edge.availableAmount != null) {
+    annotations.push(`liq=${edge.availableAmount}`)
+  }
+
+  return annotations.length > 0 ? ` [${annotations.join(' ')}]` : ''
+}
+
 async function main(): Promise<void> {
   const venues = [
     new HeliExAdapter(),
@@ -79,8 +106,9 @@ async function main(): Promise<void> {
   for (const row of summary) {
     console.log(`\n${row.asset}`)
     for (const edge of row.edges) {
+      const annotations = formatEdgeAnnotations(edge)
       console.log(
-        `  -> ${edge.to} via ${edge.venue} (${edge.market}) [${edge.action} @ ${edge.priceSide}=${edge.price}]`
+        `  -> ${edge.to} via ${edge.venue} (${edge.market}) [${edge.action} @ ${edge.priceSide}=${edge.price}]${annotations}`
       )
     }
   }
@@ -108,13 +136,37 @@ async function main(): Promise<void> {
     }
 
     const amounts = startAmountsForAsset(from)
-    const results: any[] = []
+    const results: Array<{
+      startAmount: number
+      bestRoute: string
+      impliedRate: number
+      score: number
+      hops: number
+      staleSeconds: number
+      degradedEdges: number
+      isAmountValid: boolean
+      amountWarnings: string[]
+      venues: string[]
+      markets: string[]
+    }> = []
 
     for (const startAmount of amounts) {
       const best = selectBestRoute(routes, startAmount)
 
       if (!best) {
-        results.push({ startAmount, bestRoute: 'none' })
+        results.push({
+          startAmount,
+          bestRoute: 'none',
+          impliedRate: 0,
+          score: Number.NEGATIVE_INFINITY,
+          hops: 0,
+          staleSeconds: 0,
+          degradedEdges: 0,
+          isAmountValid: false,
+          amountWarnings: ['No valid route found'],
+          venues: [],
+          markets: [],
+        })
         continue
       }
 
@@ -123,10 +175,49 @@ async function main(): Promise<void> {
         bestRoute: summarizeRoute(best.route),
         impliedRate: best.impliedRate,
         score: best.score,
+        hops: best.hopCount,
+        staleSeconds: best.staleSeconds,
+        degradedEdges: best.degradedEdges,
+        isAmountValid: best.isAmountValid,
+        amountWarnings: best.amountWarnings,
+        venues: best.route.edges.map((edge) => edge.venue),
+        markets: best.route.edges.map((edge) => edge.market.symbol),
       })
     }
 
-    console.log({ from, to, results })
+    const validResults = results.filter((result) => result.isAmountValid)
+    const firstValid = validResults.at(0) ?? null
+    const lastValid = validResults.at(-1) ?? null
+
+    console.log({
+      from,
+      to,
+      testedAmounts: results.map((result) => result.startAmount),
+      validAmounts: validResults.map((result) => result.startAmount),
+      firstValidAmount: firstValid?.startAmount ?? null,
+      lastValidAmount: lastValid?.startAmount ?? null,
+      bestRoute: results[0]?.bestRoute ?? 'none',
+      venues: results[0]?.venues ?? [],
+      markets: results[0]?.markets ?? [],
+    })
+
+    for (const result of results) {
+      console.log({
+        from,
+        to,
+        startAmount: result.startAmount,
+        bestRoute: result.bestRoute,
+        impliedRate: result.impliedRate,
+        score: result.score,
+        hops: result.hops,
+        staleSeconds: result.staleSeconds,
+        degradedEdges: result.degradedEdges,
+        isAmountValid: result.isAmountValid,
+        amountWarnings: result.amountWarnings,
+        venues: result.venues,
+        markets: result.markets,
+      })
+    }
   }
 }
 
