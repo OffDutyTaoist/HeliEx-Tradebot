@@ -34,6 +34,25 @@ export interface RouteCandidate {
   edges: MarketEdge[]
 }
 
+export interface MarketGraphSummaryEdge {
+  to: string
+  venue: VenueName
+  market: string
+  action: 'sell_base' | 'buy_base'
+  priceSide: 'bid' | 'ask'
+  price: number
+  status: VenueStatus
+  timestamp: string
+  minAmount?: number | null
+  maxAmount?: number | null
+  availableAmount?: number | null
+}
+
+export interface MarketGraphSummaryRow {
+  asset: string
+  edges: MarketGraphSummaryEdge[]
+}
+
 function assetSymbol(asset: string | { toString(): string }): string {
   return String(asset)
 }
@@ -42,6 +61,15 @@ function addEdge(adjacency: Map<string, MarketEdge[]>, edge: MarketEdge): void {
   const current = adjacency.get(edge.from) ?? []
   current.push(edge)
   adjacency.set(edge.from, current)
+}
+
+function compareEdges(a: MarketEdge, b: MarketEdge): number {
+  return (
+    a.to.localeCompare(b.to)
+    || a.venue.localeCompare(b.venue)
+    || a.market.symbol.localeCompare(b.market.symbol)
+    || a.action.localeCompare(b.action)
+  )
 }
 
 export function buildMarketGraph(scanned: ScannedTicker[]): MarketGraph {
@@ -95,6 +123,29 @@ export function buildMarketGraph(scanned: ScannedTicker[]): MarketGraph {
   }
 
   return { edges, adjacency }
+}
+
+export function summarizeMarketGraph(graph: MarketGraph): MarketGraphSummaryRow[] {
+  return [...graph.adjacency.entries()]
+    .sort(([leftAsset], [rightAsset]) => leftAsset.localeCompare(rightAsset))
+    .map(([asset, edges]) => ({
+      asset,
+      edges: [...edges]
+        .sort(compareEdges)
+        .map((edge) => ({
+          to: edge.to,
+          venue: edge.venue,
+          market: edge.market.symbol,
+          action: edge.action,
+          priceSide: edge.priceSide,
+          price: edge.price,
+          status: edge.status,
+          timestamp: edge.timestamp,
+          minAmount: edge.minAmount ?? null,
+          maxAmount: edge.maxAmount ?? null,
+          availableAmount: edge.availableAmount ?? null,
+        })),
+    }))
 }
 
 export function priceRoute(route: RouteCandidate, startAmount = 1): number {
