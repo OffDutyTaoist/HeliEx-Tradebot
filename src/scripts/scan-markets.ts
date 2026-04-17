@@ -3,7 +3,7 @@ import { AltQuickAdapter } from '../venues/altquick/adapter.js'
 import { CoinbaseAdapter } from '../venues/coinbase/adapter.js'
 import { DEFAULT_TRACKED_MARKETS } from '../domain/default-markets.js'
 import { scanMarkets, classifyStatus } from '../services/market-scanner.js'
-import { buildMarketGraph } from '../core/market-graph.js'
+import { buildMarketGraph, summarizeMarketGraph } from '../core/market-graph.js'
 import { discoverRoutes, summarizeRoute } from '../services/route-discovery.js'
 import { HeliExAdapter } from '../venues/heliex/adapter.js'
 import { selectBestRoute } from '../services/route-ranking.js'
@@ -74,6 +74,17 @@ async function main(): Promise<void> {
     edges: graph.edges.length,
   })
 
+  const summary = summarizeMarketGraph(graph)
+
+  for (const row of summary) {
+    console.log(`\n${row.asset}`)
+    for (const edge of row.edges) {
+      console.log(
+        `  -> ${edge.to} via ${edge.venue} (${edge.market}) [${edge.action} @ ${edge.priceSide}=${edge.price}]`
+      )
+    }
+  }
+
   const targets: Array<[string, string]> = [
     ['GRC', 'BTC'],
     ['GRC', 'USD'],
@@ -97,37 +108,13 @@ async function main(): Promise<void> {
     }
 
     const amounts = startAmountsForAsset(from)
-    const results: Array<{
-      startAmount: number
-      bestRoute: string
-      impliedRate: number
-      score: number
-      hops: number
-      staleSeconds: number
-      degradedEdges: number
-      isAmountValid: boolean
-      amountWarnings: string[]
-      venues: string[]
-      markets: string[]
-    }> = []
+    const results: any[] = []
 
     for (const startAmount of amounts) {
       const best = selectBestRoute(routes, startAmount)
 
       if (!best) {
-        results.push({
-          startAmount,
-          bestRoute: 'none',
-          impliedRate: 0,
-          score: Number.NEGATIVE_INFINITY,
-          hops: 0,
-          staleSeconds: 0,
-          degradedEdges: 0,
-          isAmountValid: false,
-          amountWarnings: ['No valid route found'],
-          venues: [],
-          markets: [],
-        })
+        results.push({ startAmount, bestRoute: 'none' })
         continue
       }
 
@@ -136,52 +123,10 @@ async function main(): Promise<void> {
         bestRoute: summarizeRoute(best.route),
         impliedRate: best.impliedRate,
         score: best.score,
-        hops: best.hopCount,
-        staleSeconds: best.staleSeconds,
-        degradedEdges: best.degradedEdges,
-        isAmountValid: best.isAmountValid,
-        amountWarnings: best.amountWarnings,
-        venues: best.route.edges.map((edge) => edge.venue),
-        markets: best.route.edges.map((edge) => edge.market.symbol),
       })
     }
 
-    const validResults = results.filter((result) => result.isAmountValid)
-    const firstValid = validResults.at(0) ?? null
-    const lastValid = validResults.at(-1) ?? null
-
-    const firstValidAmount = firstValid?.startAmount ?? null
-    const lastValidAmount = lastValid?.startAmount ?? null
-
-    console.log({
-      from,
-      to,
-      testedAmounts: results.map((result) => result.startAmount),
-      validAmounts: validResults.map((result) => result.startAmount),
-      firstValidAmount,
-      lastValidAmount,
-      bestRoute: results[0]?.bestRoute ?? 'none',
-      venues: results[0]?.venues ?? [],
-      markets: results[0]?.markets ?? [],
-    })
-
-    for (const result of results) {
-      console.log({
-        from,
-        to,
-        startAmount: result.startAmount,
-        bestRoute: result.bestRoute,
-        impliedRate: result.impliedRate,
-        score: result.score,
-        hops: result.hops,
-        staleSeconds: result.staleSeconds,
-        degradedEdges: result.degradedEdges,
-        isAmountValid: result.isAmountValid,
-        amountWarnings: result.amountWarnings,
-        venues: result.venues,
-        markets: result.markets,
-      })
-    }
+    console.log({ from, to, results })
   }
 }
 
