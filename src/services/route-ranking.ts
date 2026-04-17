@@ -156,10 +156,11 @@ export function selectBestRoute(
   startAmount = 1
 ): RankedRoute | null {
   const ranked = rankRoutes(routes, startAmount)
+  const valid = ranked.filter((route) => route.isAmountValid)
 
-  if (ranked.length === 0) {
+  if (valid.length === 0) {
     return null
   }
 
-  return ranked[0]!
+  return valid[0]!
 }
